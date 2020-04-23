@@ -25,18 +25,13 @@ class PatternMatch(object):
         self.syntaxMatch = {'task_whether':[['是不是'],['是','吗'],['有没有'],['有','吗'],['是否']],
                          'task_subset':[['有哪些'],['有什么'],['哪些']]}
 
-        self.nluMatch = {'task_common':[['ent','pro'],['ent']],'task_difinition':[['ent'],['ent-pro'],['pro-ent']],
-                         'task_rel':[['ent','ent','pro']],'task_btw_ent':[['ent','ent']]}
+        self.nluMatch = {'task_common':[['ent','pro'],['ent']],'task_difinition':[['ent'],['ent-pro']],
+                         'task_rel':[['ent','ent']]}
 
 
 
 
     def judgeSyntax(self,words):
-        """
-
-        :param words:
-        :return:
-        """
         for name,context in self.syntaxMatch.items():
             for con in context:
                 flag = True
@@ -49,8 +44,9 @@ class PatternMatch(object):
         return "task_normal"
 
     def judgeNlu(self,pattern):
-        """
 
+
+        """
         :param words: 问句
         :return: 认为类型
         """
@@ -66,34 +62,18 @@ class PatternMatch(object):
         """
         有两个即以上实体和至少一个属性则处理多个实体与该属性的关系
         """
-        if 'pro' in pattern and 'ent' in pattern:
+        if 'ent' in pattern:
             first_index = pattern.find('ent')
-            print(pattern[first_index:])
+            first_index += 3
             if 'ent' in pattern[first_index:]:
+                #if 'pro' in pattern and 'ent-pro' not in pattern:
+                #    return 'task_rel_pro'
                 return 'task_rel'
 
-        """
-        有多个实体没有属性
-        """
-        for context in self.nluMatch['task_btw_ent']:
-            flag = True
-            index = -1
-            for con in context:
-                temp_index = pattern[index+1:].find(con)
-                if temp_index <= index:
-                    print(con,temp_index,index,pattern[index+1])
-
-                    flag = False
-                    break
-                else:
-                    index = temp_index
-            if flag:
-                return 'task_rel'
 
         """
         有一个实体
         """
-        #print(self.nluMatch['task_common'])
         for context in self.nluMatch['task_common']:
 
             for con in context:
@@ -108,17 +88,11 @@ class PatternMatch(object):
         return None
 
     def findContry(self,father_dict):
-        """
-
-        :param father_dict:
-        :return:
-        """
         for son,fl in father_dict.items():
             if "国家" in fl or "城市" in fl:
                 return son
         else:
             return None
-
 
 
     def judgeRel(self,father_dict,entity_for_sort):
@@ -129,12 +103,10 @@ class PatternMatch(object):
         :return:
         """
         """两个实体同类的情况"""
-        #print(father_dict,entity_for_sort)
+
         ori_entity = entity_for_sort[0][0]
         ori_father = father_dict[ori_entity]
         stop_entity = []
-
-
 
         formed_entity = []
         son = self.findContry(father_dict)
@@ -173,8 +145,7 @@ class PatternMatch(object):
                     break
             sec_father = father_dict[sec_ent]
             stop_entity.append(sec_ent)
-            #print(son,ori_father)
-            #print(sec_ent,sec_father)
+
 
             """
             多个国家实体
@@ -257,7 +228,7 @@ class PatternMatch(object):
 if __name__ == '__main__':
 
     p = PatternMatch()
-    ans = p.judgeNlu("entblkent-pro")
+    ans = p.judgeNlu("ent#pro")
     print(ans)
 
 

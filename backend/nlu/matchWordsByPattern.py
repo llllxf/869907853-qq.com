@@ -7,7 +7,8 @@ project_path = os.path.abspath(os.path.join(os.getcwd(), ".."))
 # print(project_path)
 sys.path.append(project_path)
 from data.data_process import read_file
-from nlu.analysisPattern import PatternMatch
+from nlu.patternAnalysis import PatternMatch
+from nlu.LTPUtil import LTPUtil
 
 import requests, json
 
@@ -24,9 +25,9 @@ class matchWordsByPattern(object):
         2. 属性需要进一步出去，分离出图谱属性，统配属性，属性别称
         3. 实体个属性都按照长度排序
         4. 设定停用词和过滤符号
-
         """
         self.pattern_match = PatternMatch()
+        self.ltp_util = LTPUtil()
 
         self.instanceArray = list(set(read_file(project_path + "/data/allentity.csv")))
         self.instanceArray = sorted(self.instanceArray, key=lambda i: len(i), reverse=True)
@@ -45,7 +46,11 @@ class matchWordsByPattern(object):
         self.symbol = [",","，",".","。","!","！","@","#","$",
                          "%","^","&","*","(","（",")","）","{","「","}","」","[","]","【","】","、","\\","|",";",
                        "；","<",">","?","？","`","~","·","～","：",":","*"]
-        #self.position_key = ['位于']
+
+        jieba.load_userdict(project_path + "/data/allentity.csv")
+        jieba.load_userdict(project_path + "/data/pro.csv")
+        jieba.load_userdict(project_path + "/data/jieba_other.csv")
+
 
         for p in proArray:
             temp_standard = p.split(":")
@@ -59,16 +64,13 @@ class matchWordsByPattern(object):
                 if len(temp_alias)>1 and temp_alias[1] != '':
                         self.aliasPro[temp_standard[0]]= temp_alias[1:]
 
-
-
-    def wordBywordAndCheck(self, words):
+    def wordBywordAndCheck(self, cut_words):
         """
-        逐词比较句子中是否有图谱中的实体，关系，属性
+        1.分词
+        2.得到图谱中的实体和属性，并标记下标，生成模版
         :param words: 句子
         :return: 抽取的实体，属性，关系
         """
-
-        words_mark = np.zeros(len(words))
 
         find_common_pro = []
         find_pro = []
@@ -77,138 +79,91 @@ class matchWordsByPattern(object):
         com_index = {}
         ins_index = {}
 
-        for i in self.instanceArray:
-            if i in words:
-                if self.judgeSub(i,find_entity):
+        #cut_words = list(jieba.cut(words))
+        words_mark = np.zeros(len(cut_words))
+
+        for c_index in range(len(cut_words)):
+
+            cw = cut_words[c_index]
+            if cw in self.instanceArray:
+                if self.judgeSub(cw,find_entity):
                     continue
+                words_mark[c_index]=1
+                ins_index[cw]=c_index
+                find_entity.append(cw)
 
-                instance_index_begin = words.find(i)
-                instance_index_end = instance_index_begin+len(i)-1
-
-                for mark_index in range(instance_index_begin,instance_index_end):
-                    words_mark[mark_index] = 1
-                ins_index[i] = [instance_index_begin,instance_index_end]
-                find_entity.append(i)
-
-
-        for sp in self.standardPro:
-
-            if sp in words:
-                #if (sp in find_pro):
-                #    continue
-                if self.judgeSub(sp,find_pro):
+            if cw in self.standardPro:
+                if self.judgeSub(cw,find_pro):
                     continue
-                standardpro_index_begin = words.find(sp)
-                standardpro_index_end = standardpro_index_begin+len(sp)-1
-                if standardpro_index_end > len(words_mark)-1:
-                    standardpro_index_end = len(words_mark)-1
-
-                temp_mark = words_mark[standardpro_index_begin:standardpro_index_end]
-
-                if 1 in temp_mark:
-                    if temp_mark[0] == 0:
-                        words_mark[standardpro_index_end] = 2
-                    else:
-                        words_mark[standardpro_index_end] = 3
-                else:
-                    for mark_index in range(standardpro_index_begin, standardpro_index_end):
-                        words_mark[mark_index] = 4
-                pro_index[sp] = [standardpro_index_begin,standardpro_index_end]
-                find_pro.append(sp)
-
-
-        for n,pro in self.aliasPro.items():
-
-            for p in pro:
-                if p in words:
-                    if n in find_pro:
-                        continue
-                    #print(words_mark)
-
-                    aliaspro_index_begin = words.find(p)
-                    aliaspro_index_end = aliaspro_index_begin + len(p) - 1
-                    if aliaspro_index_end > len(words_mark)-1:
-                        aliaspro_index_end = len(words_mark)-1
-                    temp_mark = words_mark[aliaspro_index_begin:aliaspro_index_end]
-
-                    #print(p,aliaspro_index_begin,aliaspro_index_end)
-                    #print(temp_mark)
-                    """
-                    if 2 in temp_mark or 3 in temp_mark or 4 in temp_mark:
-                        continue
-                    """
-                    if 1 in temp_mark:
-
-                        if temp_mark[0] == 0:
-
-                            words_mark[aliaspro_index_end] = 2
-                        else:
-                            words_mark[aliaspro_index_end] = 3
-                    else:
-                        for mark_index in range(aliaspro_index_begin, aliaspro_index_end):
-                            words_mark[mark_index] = 4
-                    pro_index[n] = [aliaspro_index_begin,aliaspro_index_end]
-                    find_pro.append(n)
-
-
-        for p in self.commonPro:
-            if p in words:
-                commonpro_index_begin = words.find(p)
-                commonpro_index_end = commonpro_index_begin + len(p) - 1
-                temp_mark = words_mark[commonpro_index_begin:commonpro_index_end]
-                if commonpro_index_end > len(words_mark)-1:
-                    commonpro_index_end = len(words_mark)-1
-                if 1 in temp_mark or 2 in temp_mark or 3 in temp_mark or 4 in temp_mark:
+                if words_mark[c_index]==1:
+                    words_mark[c_index]=3
+                    find_pro.append(cw)
+                    pro_index[cw]=c_index
+                elif words_mark[c_index]>0:
                     continue
                 else:
-                    for mark_index in range(commonpro_index_begin, commonpro_index_end):
-                        words_mark[mark_index] = 5
-                find_common_pro.append(p)
-                com_index[p] = []
+                    words_mark[c_index]=2
+                    find_pro.append(cw)
+                    pro_index[cw] = c_index
 
+            for n,pro in self.aliasPro.items():
+                if cw in pro:
+                    if self.judgeSub(n,find_pro):
+                        continue
+                    if words_mark[c_index] == 1:
+                        words_mark[c_index] = 3
+                        find_pro.append(n)
+                        pro_index[n] = c_index
+                    elif words_mark[c_index] > 0:
+                        continue
+                    else:
+                        words_mark[c_index] = 2
+                        find_pro.append(n)
+                        pro_index[n] = c_index
 
-        words_mark_bake = list(words_mark[1:])
-        words_mark_bake.append(0)
-
-
-        diff_index = list(np.where(words_mark != words_mark_bake)[0])
-        pattern_mark = [words_mark[0]]
-
-        for dif in diff_index[:len(diff_index)-1]:
-            pattern_mark.append(words_mark[dif+1])
-
-
-        """
-        blk: blank
-        ent: entity
-        pro-: 与ent重叠，且重叠部分在前面的属性
-        -pro: 与ent重叠，且重叠部分在后面的属性 比如洞庭湖，洞庭湖是ent，但湖是pro，所以是ent-pro
-        pro: 没有与ent重叠的属性
-        com: 通用属性
-        """
+            if words_mark[c_index]>0:
+                continue
+            if cw in self.commonPro:
+                if self.judgeSub(cw,find_pro):
+                    continue
+                if self.judgeSub(cw,find_common_pro):
+                    continue
+                find_common_pro.append(cw)
+                com_index[cw]=c_index
+                words_mark[c_index] = 4
 
         pattern = ""
-        for pm in pattern_mark:
-            if pm == 0:
-                pattern += "blk"
-            if pm == 1:
+        for wm in words_mark[:-1]:
+
+            #if wm == 0:
+            #    pattern += "blk"
+            if wm == 1:
                 pattern += "ent"
-            if pm == 2:
-                pattern += "pro-"
-            if pm == 3:
-                pattern += "-pro"
-            if pm == 4:
+            if wm == 2:
                 pattern += "pro"
-            if pm == 5:
+            if wm == 3:
+                pattern += "ent-pro"
+            if wm == 4:
                 pattern += "com"
-        #print(pattern)
+            pattern+="#"
+        #print(words_mark,len(words_mark),words)
+        if words_mark[len(words_mark)-1] == 1:
+            pattern += "ent"
+        if words_mark[len(words_mark)-1] == 2:
+            pattern += "pro"
+        if words_mark[len(words_mark)-1] == 3:
+            pattern += "ent-pro"
+        if words_mark[len(words_mark)-1] == 4:
+            pattern += "com"
 
         return pattern,find_entity, find_pro,find_common_pro,ins_index,pro_index,com_index
 
 
     def preProcessWords(self, words):
         """
-        句子预处理，去掉符号和停用词
+        句子预处理
+        1.去掉符号和停用词
+        2.去掉"的"，如果有目的，则复原
         :param words: 句子
         :return: 处理后的句子
         """
@@ -219,6 +174,14 @@ class matchWordsByPattern(object):
         for sym in self.symbol:
             while(sym in words):
                 words = words.replace(sym,'')
+
+        flag = False
+        if "目的" in words:
+            flag = True
+        words = self.deletDE(words)
+
+        if flag:
+            words = words.replace("目","目的")
 
         return words
 
@@ -262,7 +225,6 @@ class matchWordsByPattern(object):
 
         """
         ans = {}
-        #print("find_entity",find_entity)
         if len(find_entity) > 0:
             for e in find_entity:
 
@@ -282,18 +244,34 @@ class matchWordsByPattern(object):
         :param entity_deal: 携带信息的实体
         :return:
         """
+        ans = {}
 
         for name, content in entity_deal.items():
+            name_dict = {}
             pro = np.array(content['p'])
             rel = np.array(content['r'])
 
             for p in pro:
                 if p[0] in find_pro:
 
-                    return [name,p[0],p[1]]
+                    if p[0] in name_dict.keys():
+                        name_dict[p[0]].append(p[1])
+                    else:
+                        name_dict[p[0]] = [p[1]]
             for r in rel:
                 if r[0] in find_pro:
-                    return [name,r[0],r[1]]
+
+                    if r[0] in name_dict.keys():
+                        name_dict[r[0]].append(r[1])
+                    else:
+                        name_dict[r[0]] = [r[1]]
+            if name_dict != {}:
+                ans[name]=name_dict
+
+        if ans == {}:
+            return None
+        else:
+            return [ans]
 
     def positionControl(self, entity_deal):
         """
@@ -310,9 +288,6 @@ class matchWordsByPattern(object):
         for name, content in entity_deal.items():
             pro = np.array(content['p'])
             rel = np.array(content['r'])
-            #print(pro)
-            #print(rel)
-
             for p in pro:
                 if p[0] in self.position_key:
                     ans.append(p[1])
@@ -336,14 +311,17 @@ class matchWordsByPattern(object):
         :return:
         """
 
-        a_entity_pro = []
+        a_entity_pro = {}
         for p in entity_pro:
             if common_pro in p[0]:
-
-                a_entity_pro.append(p)
-        if a_entity_pro == []:
+                if p[0] in a_entity_pro.keys():
+                    a_entity_pro[p[0]].append(p[1])
+                else:
+                    a_entity_pro[p[0]] = [p[1]]
+        if a_entity_pro == {}:
             return None
         else:
+            #print("a_entity_pro",a_entity_pro)
             return a_entity_pro
 
     def judgeSub(self, sub, ori_list):
@@ -354,7 +332,9 @@ class matchWordsByPattern(object):
         :return:
         """
 
+
         for ori in ori_list:
+
             if sub in ori:
                 return True
         return False
@@ -371,19 +351,25 @@ class matchWordsByPattern(object):
         common_pro = {}
 
         for name, content in entity_deal.items():
+
+            name_dict = {}
+
             pro = np.array(content['p'])
             rel = np.array(content['r'])
 
-
-
             for c_p in find_pro:
 
-                a_entity_pro = self.judgeProByMatch(c_p,pro)
-                if a_entity_pro:
-                    common_pro[name] = a_entity_pro
+                p = self.judgeProByMatch(c_p,pro)
+                if p:
+                    for pkey,pvalue in p.items():
+                        name_dict[pkey] = pvalue
+            if name_dict != {}:
+                common_pro[name] = name_dict
+
+
         if common_pro == {}:
             return None
-        return common_pro
+        return [common_pro]
 
     def test(self):
         uri = "http://192.168.80.1:8888?target=similar"
@@ -421,13 +407,10 @@ class matchWordsByPattern(object):
         :param deal_entity: 实体及其信息
         :return: 答案或空
         """
-        #print("words",words)
+
+
         ans_con=[]
         count_rate=[]
-        similar_pro=[]
-        pro_rate = []
-
-
 
         for name,content2 in deal_entity.items():
 
@@ -436,6 +419,7 @@ class matchWordsByPattern(object):
             """
             pro = np.array(content2['p'])
             rel = np.array(content2['r'])
+
             #print(name,pro,rel)
             """
             去掉问题中的实体方便匹配
@@ -443,10 +427,17 @@ class matchWordsByPattern(object):
 
             while (name in words):
                 words = words.replace(name,'')
-                #print(words)
+            if words == "":
+                continue
 
             for p in pro:
+
+                """
+                类似与标签的属性
+                """
                 if p[1] == name:
+                    continue
+                if '分类' in p[0]:
                     continue
 
                 con =self.preProcessWords(p[1])
@@ -456,129 +447,25 @@ class matchWordsByPattern(object):
 
                 if len(con)>len(words):
                     c_len = len(words)
-
-                    #cut_word = list(jieba.cut(words))
-                    #c_len = len(cut_word)
+                    #print(con,words,"1")
                     count = self.seacrchAll(con,words)
                 else:
+                    #print(con, words,"2")
                     c_len = len(con)
-                    #cut_word = list(jieba.cut(con))
-                    #c_len = len(cut_word)
                     count = self.seacrchAll(words,con)
-
                 #print(count,c_len)
-
                 if float(count) / float(c_len) >= 0.65:
+                    if len(con)>=3*len(words):
+                        continue
                     ans_con.append([name, p[0], p[1]])
                     count_rate.append(count / c_len)
-                """
-                else:
+                #print(words)
 
-                    uri = "http://192.168.80.1:8888?target=score"
-                    data = json.dumps({"question": words, "pro": con})
+        if count_rate != []:
+            #max_index = np.argmax(np.array(count_rate))
+            return [ans_con,count_rate]
 
-                    res = requests.post(uri, data)
-                    if '500' in str(res.content):
-                        continue
-
-                    score = res.json()['response']
-                    if score != "None":
-                        score = float(score)
-                        #print(pro, words, score)
-                        if score > 0.7:
-                            pro_rate.append(score)
-                            similar_pro.append([name, p[0], p[1]])
-                """
-
-            for r in rel:
-                if (r[0]=='类型' or r[0]=='部分于' or r[0]=="分类" or r[0]=="下属于"
-                        or r[0]=="实体限制" or r[0]=="强相关于" or r[0]=="等同"):
-                    continue
-                if r[1] ==  name:
-                    continue
-
-                con =self.preProcessWords(r[1])
-
-                while (name in con):
-                    con = con.replace(name, '')
-
-                if len(con)>len(words):
-                    #cut_word = list(jieba.cut(words))
-                    c_len = len(words)
-                    count = self.seacrchAll(con,words)
-                else:
-                    #cut_word = list(jieba.cut(con))
-                    c_len = len(con)
-                    count = self.seacrchAll(words,con)
-
-                if count / c_len >= 0.65:
-                    ans_con.append([name, r[0], r[1]])
-                    count_rate.append(count / c_len)
-                """
-                else:
-                    uri = "http://192.168.80.1:8888?target=score"
-                    data = json.dumps({"question": words, "pro": con})
-
-                    res = requests.post(uri, data)
-                    if '500' in str(res.content):
-                        continue
-
-                    score = res.json()['response']
-                    if score != "None":
-                        score = float(score)
-                        #print(pro, words, score)
-                        if score > 0.7:
-                            pro_rate.append(score)
-                            similar_pro.append([name, r[0], r[1]])
-                """
-
-
-            if count_rate != []:
-                max_index = np.argmax(np.array(count_rate))
-                return ans_con[max_index]
-            """
-
-            if pro_rate != []:
-                max_index = np.argmax(np.array(pro_rate))
-                return similar_pro[max_index]
-            """
-            """
-            for r in rel:
-                if (r[0]=='类型' or r[0]=='部分于' or r[0]=="分类" or r[0]=="下属于"
-                        or r[0]=="实体限制" or r[0]=="强相关于" or r[0]=="等同"):
-                    continue
-                if r[1] ==  name:
-                    continue
-
-                uri = "http://192.168.80.1:8888?target=similar"
-                data = json.dumps({"question": words, "pro": r[1]})
-
-                res = requests.post(uri, data)
-                similar = float(res.json()['response'])
-                if similar > 0.7:
-                    pro_rate.append(similar)
-                    similar_pro.append([name, r[0], r[1]])
-                count = 0
-                cut_word = list(jieba.cut(r[1]))
-                r_len = len(cut_word)
-                for word in cut_word:
-                    if word in words:
-                        count = count + 1
-
-                if count / r_len >= 0.65:
-                    ans_con.append([name, r[0], r[1]])
-                    count_rate.append(count / r_len)
-
-            if count_rate != []:
-                max_index = np.argmax(np.array(count_rate))
-                return ans_con[max_index]
-
-            if pro_rate != []:
-                max_index = np.argmax(np.array(pro_rate))
-                return similar_pro[max_index]
-            """
-
-            return None
+        return None
 
 
     def directAns(self,words,find_entity,find_pro,find_common_pro):
@@ -589,50 +476,31 @@ class matchWordsByPattern(object):
         :param find_pro:
         :return:
         """
-        """查找实体对应信息"""
+
         deal_entity = self.dealWithEnitity(find_entity)
-
-        print("deal_entity",deal_entity)
-
-
-
+        print("抽取的实体信息:",deal_entity)
+        print("========================================================")
 
         """抽取的属性可直接查找内容回答"""
         if len(find_pro) > 0:
-
             ans = self.directAnsProName(find_pro, deal_entity)
+
             if ans != None:
-                #print(ans,"bbb")
-                return ans[0] + "的" + ans[1] + ": " + ans[2]
+                #print(ans)
+                return ans
+        if len(find_common_pro)>0:
+
             ans = self.directAnsComProName(find_common_pro,deal_entity)
             if ans != None:
-
-                #print("ccc",ans)
-                ans_string = ""
-                for name,content in ans.items():
-                    ans_string += name + "\n"
-
-                    for c in content:
-
-                        form_content = ""
-                        for word in c[1]:
-                            """
-                            用replace和strip都不行
-                            """
-                            if word != "\n":
-                                form_content += word
-                        ans_string += c[0]+": "+form_content+"\n"
-                    ans_string += "\n"
-
-                return ans_string
+                #print(ans)
+                return ans
 
         """抽取的属性不可直接回答/没有抽取出属性"""
 
         ans = self.directAnsProCon(words, deal_entity)
-        if ans != None:
 
-            #print(ans,"ddd")
-            return ans[0] + "的" + ans[1] + ": " + ans[2]
+        if ans != None:
+            return ans
         return None
 
     def getEntityByType(self, entity):
@@ -646,7 +514,6 @@ class matchWordsByPattern(object):
         uri = "http://127.0.0.1:8004/getEntityByType?repertoryName=geo&entityName=" + entity
         r = requests.post(uri)
         son_list = list(r.json())
-        #print("son_list",son_list)
 
         if son_list == []:
             return None
@@ -668,7 +535,6 @@ class matchWordsByPattern(object):
             return None
 
         son_list = list(res.json())
-        print("son_list",son_list)
 
         if son_list == []:
             return None
@@ -725,21 +591,22 @@ class matchWordsByPattern(object):
         """
         for e in find_entity:
             father_list = self.getFatherByType(e)
+            if father_list==None:
+                continue
             father_list = list(set(father_list))
-            print(father_list)
+            #print(father_list)
             if father_list:
                 ans = self.directAns(words,father_list,find_pro,find_common_pro)
                 if ans != None:
                     return ans
         return None
 
-
-
     def ansDefinition(self, entity):
         """获取属性信息"""
         uri = "http://127.0.0.1:8004/getEntityByLabelWithPro?repertoryName=geo&entityName=" + entity
         r = requests.post(uri)
         pro_list = list(r.json())
+        #print(pro_list)
 
         for pro in pro_list:
 
@@ -759,9 +626,10 @@ class matchWordsByPattern(object):
         :param words: 问句
         :return: 回答
         """
-        words = self.preProcessWords(words)
+        cut_words = list(jieba.cut(words))
+        #words = self.preProcessWords(words)
         pattern, find_entity, find_pro, find_common_pro, entity_index, pro_index, common_index = self.wordBywordAndCheck(
-            words)
+            cut_words)
         #find_entity, find_pro,find_common_pro = self.wordByword(words)
         for e in find_entity:
             son_list = self.getEntityByType(e)
@@ -769,46 +637,51 @@ class matchWordsByPattern(object):
                 return " ".join(son_list)
         return None
 
-
-    def dealWithAsking(self, words):
-        """
-        1.抽取句子中的实体，属性，关系
-        2.如果抽取的实体和句子等同，那么回答定义问题
-        3.得到抽取的实体的属性和关系值
-        4.处理问句
-           1.如果句子匹配到实体，根据实体对应的属性和关系来匹配
-           2.如果句子匹配到实体但没有匹配到属性，则匹配属性的值
-           3.如果句子存在找到的实体但没有匹配1和2，且句子中的实体存在下一级实体，则查找下一级，执行1和的2步骤（逐级查找-层级）
-
-        :param words:句子
-        :return: 回答或None
+    def checkPosition(self,entity,unuse_ent):
         """
 
-        words = self.preProcessWords(words)
 
+        :param entity:
+        :param unuse_ent:
+        :return:
         """
-        匹配句子与图谱中的实体、属性和关系，抽取出实体、属性和关系
-        解析模版
-        
+        if unuse_ent == []:
+            return True
+
+        entity_deal = self.dealWithEnitity([entity])
+
+        for name, content in entity_deal.items():
+
+            pro = np.array(content['p'])
+            rel = np.array(content['r'])
+
+            for pname,pvalue in pro:
+                for une in unuse_ent:
+                    if une in pvalue:
+                        return True
+            for rname,rvalue in rel:
+                for une in unuse_ent:
+                    if une in rvalue:
+                        return True
+        return False
+
+    def dealWithQuesType(self,task,words,find_entity,find_pro,find_common_pro):
         """
-        pattern, find_entity, find_pro, find_common_pro, entity_index, pro_index, common_index = self.wordBywordAndCheck(
-            words)
-        task = self.pattern_match.judgeNlu(pattern)
 
-        print("========================================================")
-        print("得到的句子模版: ", pattern)
-        print("抽取的实体: ", find_entity, "\t实体及其在句子中的下标: ", entity_index)
-        print("抽取的属性或关系: ", find_pro, "\t属性及其在句子中的下标: ", pro_index)
-        print("抽取的通用属性或关系: ", find_common_pro, "\t通用属性及其在句子中国的下标: ", common_index)
-        print("任务类型: ", task)
-        print("========================================================")
-
+        根据不同类型的问题有不同的回答策略
+        :param task: 问题类型（任务类型）
+        :param words: 问句
+        :param find_entity: 找到的实体
+        :param find_pro: 找到的属性关系
+        :param find_common_pro: 找到的通用属性
+        :return: 问题的回答集
+        """
         if task == 'task_difinition':
             ans = self.ansDefinition(find_entity[0])
             print(ans, "ansDefinition")
-            return ans
+            return [{find_entity[0]:{'介绍':[ans]}}]
 
-        elif task == 'task_common':
+        elif task != None:
 
             ans = self.directAns(words, find_entity, find_pro, find_common_pro)
             if ans != None:
@@ -822,127 +695,439 @@ class matchWordsByPattern(object):
             if ans != None:
                 print(ans, "upFindAns")
                 return ans
-        elif task == "task_rel":
-            father_dict = {}
 
-            entity_for_sort = []
-            for e in find_entity:
-                entity_for_sort.append([e,entity_index[e][0]])
+    def hedAnswer(self,answern,cut_words,arcs_dict,hed_index):
+        """
+        提取问句中的关键信息，通过回答集与关键信息的匹配得到更精确的回答集，适用于非匹配属性值得到回答集的情况
 
-            entity_for_sort = sorted(entity_for_sort, key=lambda i: i[1])
+        :param answern: 回答集
+        :param cut_words:问句的分词
+        :param arcs_dict:依存树
+        :param hed_index:关键词
+        :return:更精确的回答集
+        """
+        hed_name_ans = []
+        hed_content_ans = []
+        hed_keys = arcs_dict[hed_index].keys()
+        SBV = ""
+        VOB = ""
 
-            for se in entity_for_sort:
+        if 'SBV' in hed_keys:
+            SBV = cut_words[arcs_dict[hed_index]['SBV'][0]]
+        else:
+            SBV = cut_words[hed_index]
+        if 'VOB' in hed_keys:
+            VOB = cut_words[arcs_dict[hed_index]['VOB'][0]]
 
-                father = self.getFatherByType(se[0])
-                father_dict[se[0]] = father
+        for name, content in answern.items():
 
-            judged_rel,formed_entity = self.pattern_match.judgeRel(father_dict,entity_for_sort)
-            print(judged_rel,formed_entity)
+            if SBV in name:
+                hed_name_ans.append({name: content})
+            conv = list(content.values())[0]
+            values = "".join(conv)
+            #print("values", values)
 
-            if judged_rel == 'task_same_level' or (judged_rel == 'task_position_limit' and len(formed_entity)>2):
-                combine_ans = ""
-                for se in formed_entity:
-                    find_entity_branch = [se]
-                    ans = self.directAns(words, find_entity_branch, find_pro, find_common_pro)
-                    if ans != None:
-                        combine_ans+=ans
-                        print(ans, "directAns")
+            if self.judgeSub(SBV, [values]):
+                hed_content_ans.append({name: content})
+        if hed_name_ans!=[] or hed_content_ans!=[]:
+            return hed_name_ans,hed_content_ans
+
+        for name, content in answern.items():
+
+            if VOB in name:
+                hed_name_ans.append({name: content})
+            conv = list(content.values())[0]
+            values = "".join(conv)
+            #print("values", values)
+
+            if self.judgeSub(VOB, [values]):
+                hed_content_ans.append({name: content})
+
+        return hed_name_ans,hed_content_ans
+
+    def getEntByfuzzySearch(self,words):
+
+        uri = "http://127.0.0.1:8004/fuzzySearch?repertoryName=geo&words=" + words
+        r = requests.post(uri)
+        ent_list = list(r.json())
+        #print(ent_list)
+        return ent_list
+
+    def hedAnswerForProMatch(self,answern,rate,cut_words,arcs_dict,hed_index):
+        """
+        提取问句中的关键信息，通过关键信息与回答集的匹配得到更精确的回答集，适用于匹配属性值得到回答集的情况
+
+        :param answern:回答集
+        :param rate:每一条回答的概率（通过属性匹配得到）
+        :param cut_words:问句分词
+        :param arcs_dict:依存树
+        :param hed_index:关键词下标
+        :return:更精确的回答集以及对应的概率，关键属性（有歧义）
+        """
+        hed_name_ans = []
+        hed_content_ans = []
+        hed_rate_name = []
+        hed_rate_cont = []
+        hed_keys = arcs_dict[hed_index].keys()
+        SBV = ""
+        VOB = ""
+        ATT = ""
+
+        if 'SBV' in hed_keys:
+            SBV = cut_words[arcs_dict[hed_index]['SBV'][0]]
+            if SBV in self.stopword:
+                SBV = ""
+
+            elif 'ATT' in arcs_dict[arcs_dict[hed_index]['SBV'][0]].keys():
+                ATT = cut_words[arcs_dict[arcs_dict[hed_index]['SBV'][0]]['ATT'][-1]]
+                if ATT in self.stopword:
+                    ATT = ""
+        if SBV == "":
+            SBV = cut_words[hed_index]
+            if 'ATT' in arcs_dict[hed_index].keys():
+                ATT = cut_words[arcs_dict[hed_index]['ATT'][-1]]
+                if ATT in self.stopword:
+                    ATT = ""
+
+        if 'VOB' in hed_keys:
+            VOB = cut_words[arcs_dict[hed_index]['VOB'][0]]
+            if VOB in self.stopword:
+                VOB = ""
+        if ATT == "" and VOB != "":
+            if 'ATT' in arcs_dict[arcs_dict[hed_index]['VOB'][0]].keys():
+                ATT = cut_words[arcs_dict[arcs_dict[hed_index]['VOB'][0]]['ATT'][-1]]
+                if ATT in self.stopword:
+                    ATT = ""
+        print("ATT",ATT,SBV,VOB)
+        #print(answern)
+
+        index = 0
+
+        for name, pro_name, content in answern:
+            #print(name, pro_name, content,"---------1")
+            """
+            if SBV in name:
+                hed_name_ans.append([name,pro_name,content])
+                hed_rate_name.append(rate[index])
+                print("hed_name_ans1",hed_name_ans,hed_rate_name)
+            """
+
+            if self.judgeSub(SBV, [content]) and self.judgeSub(VOB, [content]) and self.judgeSub(ATT,[content]):
+                hed_content_ans.append([name,pro_name,content])
+                hed_rate_cont.append(rate[index])
+                #print("hed_name_ans2", hed_name_ans, hed_rate_name)
+
+            index = index+1
+        """
+        if hed_name_ans == []:
+            return [],[],[],[],""
+        """
+
+        #if hed_name_ans != [] or hed_content_ans != []:
+        #    return hed_name_ans,hed_rate_name,hed_content_ans,hed_rate_cont,ATT
+        """
+        #index = 0
+        
+
+        #for name, pro_name, content in answern:
+            
+            if VOB in name:
+                hed_name_ans.append([name,pro_name,content])
+                hed_rate_name.append(rate[index])
+                #print("hed_name_ans",hed_name_ans,hed_rate_name)
+            
+
+            #if self.judgeSub(VOB, [content]) and self.judgeSub(ATT,[content]):
+            #    hed_content_ans.append([name,pro_name,content])
+            #    hed_rate_cont.append(rate[index])
+
+            #index = index+1
+        """
+        return hed_name_ans,hed_rate_name,hed_content_ans,hed_rate_cont,ATT
+
+    def askingBackByConAtt(self,content,att):
+        """
+
+        根据提取出来的歧义属性进行反问
+        歧义属性的匹配的方式是sub(分词与属性之间)
+
+        :param content: 得到的具有歧义的问句关键属性的实体属性集
+        :param att: 歧义属性
+        :return: 返回歧义属性的主语对象集
+        """
+        SBV_arr = []
+        form_content = {}
+        for name,pro_name,pro_cont in content:
+            if name in form_content.keys():
+                form_content[name].append(pro_cont)
+            else:
+                form_content[name] = [pro_cont]
+
+            cut_words = list(jieba.cut(pro_cont))
+            #print(cut_words,att)
+
+            for cw_index in range(len(cut_words)):
+                cw = cut_words[cw_index]
+                if cw in att or att in cw:
+                    index = cw_index
+                    break
+
+            tlp_pattern, arcs_dict, postags, hed_index = self.ltp_util.get_sentence_pattern(cut_words)
+            print(tlp_pattern)
+            att_dict = arcs_dict[index]
+            if 'SBV' in att_dict.keys():
+                sbv_index = att_dict['SBV'][0]
+                if postags[sbv_index] != 'n' or cut_words[sbv_index]=='世界':
+                    continue
+                if cut_words[att_dict['SBV'][0]] in SBV_arr:
+                    continue
+
+                SBV_arr.append(cut_words[att_dict['SBV'][0]])
+
+        if len(form_content.keys())<2:
+            return None
+        if len(SBV_arr)>1:
+            print(SBV_arr)
+            return SBV_arr
+        return None
+
+    def dealWithWordsWithoutEnt(self,cut_words,arcs_dict,hed_index):
+        """
+
+        使用ltp分析句子，得到句子的主语和宾语，通过模糊查询得到匹配的主语填充作为找到的主语
+        :param cut_words: 句子分词
+        :param arcs_dict: 依存树
+        :param hed_index: 关键词下标
+        :return: 找到的实体
+        """
+
+        hed_keys = arcs_dict[hed_index].keys()
+        SBV = ""
+        VOB = ""
+        ATT = ""
+
+        if 'SBV' in hed_keys:
+            SBV = cut_words[arcs_dict[hed_index]['SBV'][0]]
+        else:
+            SBV = cut_words[hed_index]
+
+        if 'VOB' in hed_keys:
+            VOB = cut_words[arcs_dict[hed_index]['VOB'][0]]
+
+        print("SBV,VOB",SBV,VOB)
+
+        if SBV in self.stopword:
+
+            ent_list = self.getEntByfuzzySearch(VOB)
+        else:
+            ent_list = self.getEntByfuzzySearch(SBV)
+
+        #print(ent_list)
+        return ent_list
+
+
+
+
+    def dealWithAsking(self, words, reverse):
+        """
+        1.抽取句子中的实体，属性，关系
+        2.如果抽取的实体和句子等同，那么回答定义问题
+        3.得到抽取的实体的属性和关系值
+        4.处理问句
+           1.如果句子匹配到实体，根据实体对应的属性和关系来匹配
+           2.如果句子匹配到实体但没有匹配到属性，则匹配属性的值
+           3.如果句子存在找到的实体但没有匹配1和2，且句子中的实体存在下一级实体，则查找下一级，执行1和的2步骤（逐级查找-层级）
+
+        :param words:句子
+        :return: 回答或None
+        """
+        cut_words = list(jieba.cut(words))
+        words = self.preProcessWords(words)
+
+        """
+        匹配句子与图谱中的实体、属性和关系，抽取出实体、属性和关系
+        解析模版
+        
+        """
+
+        tlp_pattern, arcs_dict, postags, hed_index = self.ltp_util.get_sentence_pattern(cut_words)
+        postags = list(postags)
+
+        pattern, find_entity, find_pro, find_common_pro, entity_index, pro_index, common_index = self.wordBywordAndCheck(
+            cut_words)
+        task = self.pattern_match.judgeNlu(pattern)
+
+        if reverse:
+            find_entity = self.dealWithWordsWithoutEnt(cut_words,arcs_dict,hed_index)
+
+        print("========================================================")
+        print("分词: ",cut_words)
+        print("得到的句子模版: ", pattern)
+        print("抽取的实体: ", find_entity, "\t实体及其在句子中的下标: ", entity_index)
+        print("抽取的属性或关系: ", find_pro, "\t属性及其在句子中的下标: ", pro_index)
+        print("抽取的通用属性或关系: ", find_common_pro, "\t通用属性及其在句子中国的下标: ", common_index)
+        print("句法依存树: ", arcs_dict,hed_index)
+        print("词性分析: ",postags)
+        print("任务类型: ", task)
+        print("========================================================")
+
+
+        ans = self.dealWithQuesType(task,words,find_entity,find_pro,find_common_pro)
+        """
+        if reverse:
+            print(ans)
+            pass
+        else:
+        """
+        if True:
+
+            use_entity = []
+            unuse_ent = []
+            select_pro = []
+            select_rate = []
+
+            if ans == None:
+                return None
+            if len(ans) == 2:
+                print("==================属性值匹配===================2")
+                answern = ans[0]
+                rate = ans[1]
+                formed_name_ans = []
+                formed_cont_ans = []
+
+
+                for name, pro_name, pro in answern:
+                    #print("answern???",answern,name,pro_name,pro)
+                    """得到多实体回答问题"""
+                    if name in cut_words:
+                        formed_name_ans.append({name:{pro_name:[pro]}})
+                if formed_name_ans != []:
+                    return formed_name_ans
+                """
+                for ent_name, pro_name, pro in answern:
+                    if ent_name in words:
+                        use_entity.append(ent_name)
+                """
+                for fe in find_entity:
+                    if fe not in words:
                         continue
 
-                    ans = self.downFindAns(words, find_entity_branch, find_pro, find_common_pro)
-                    if ans != None:
-                        combine_ans += ans
-                        print(ans, "downFindAns")
+                    father = self.getFatherByType(fe)
+                    if father == None:
                         continue
+                    if "国家" in father or "城市" in father or '省' in father:
+                        unuse_ent.append(fe)
 
-                    ans = self.upFindAns(words, find_entity_branch, find_pro, find_common_pro)
-                    if ans != None:
-                        combine_ans += ans
-                        print(ans, "upFindAns")
+                if '中国' in unuse_ent:
+                    unuse_ent.append("我国")
+                c_index = 0
+
+
+                for ent_name, pro_name, pro in answern:
+                    if unuse_ent == []:
                         continue
-                if combine_ans != "":
-                    return combine_ans
+                    if self.checkPosition(ent_name, unuse_ent):
+                        select_pro.append([ent_name, pro_name, pro])
+                        select_rate.append(rate[c_index])
+                    c_index = c_index + 1
+                print("select_pro",select_pro)
+                if unuse_ent == []:
+                    select_pro = answern
+                    select_rate = rate
+                #if len(select_pro) == 1:
+                #    return [{select_pro[0]: {select_pro[1]: [select_pro[2]]}}]
 
-            elif judged_rel == 'task_position_limit' and len(formed_entity)<=1:
                 """
-                考虑实体限制
-                """
-                ans = self.directAns(words, find_entity, find_pro, find_common_pro)
-                if ans != None:
-                    print(ans, "directAns")
-                    return ans
-                ans = self.downFindAns(words, find_entity, find_pro, find_common_pro)
-                if ans != None:
-                    print(ans, "downFindAns")
-                    return ans
-                ans = self.upFindAns(words, find_entity, find_pro, find_common_pro)
-                if ans != None:
-                    print(ans, "upFindAns")
-                    return ans
-                """
-                for ent in entity_for_sort[1:]:
-
-                    find_entity_branch = [ent[0]]
-                    print(find_entity_branch, find_pro)
-                    deal_entity = self.dealWithEnitity(find_entity_branch)
-                    cont = self.positionControl(deal_entity)
-                    print("ans",cont)
-
-                    if (cont is not None and entity_for_sort[0][0] not in cont):
-                        continue
-
-                    print(find_entity_branch,find_pro)
-
-                    ans = self.directAns(words, find_entity_branch, find_pro, find_common_pro)
-                    if ans != None:
-                        print(ans, "directAns")
-                        return ans
-                    ans = self.downFindAns(words, find_entity_branch, find_pro, find_common_pro)
-                    if ans != None:
-                        print(ans, "downFindAns")
-                        return ans
-                    ans = self.upFindAns(words, find_entity_branch, find_pro, find_common_pro)
-                    if ans != None:
-                        print(ans, "upFindAns")
-                        return ans
+                if select_rate != []:
+                    max_index = np.argmax(np.array(select_rate))
+                    max_ans = select_pro[max_index]
+                    return [{max_ans[0]: {max_ans[1]: [max_ans[2]]}}]
                 """
 
-            elif judged_rel is None:
-                ans = self.directAns(words, find_entity, find_pro, find_common_pro)
-                if ans != None:
-                    print(ans, "directAns")
-                    return ans
-                ans = self.downFindAns(words, find_entity, find_pro, find_common_pro)
-                if ans != None:
-                    print(ans, "downFindAns")
-                    return ans
-                ans = self.upFindAns(words, find_entity, find_pro, find_common_pro)
-                if ans != None:
-                    print(ans, "upFindAns")
-                    return ans
-        elif task == 'task_btw_ent':
-            ent_a = find_entity[0]
-            ent_b = find_entity[1]
-            father_list_a = self.getFatherByType(ent_a)
-            father_list_b = self.getFatherByType(ent_b)
+                hed_name_ans, hed_rate_name,hed_content_ans,hed_rate_cont,ATT = self.hedAnswerForProMatch(select_pro, select_rate,cut_words, arcs_dict, hed_index)
 
-            temp_list = father_list_a
-            temp_ent = ent_a
-            if len(father_list_a) > len(father_list_b):
-                father_list_a = father_list_b
-                father_list_b = temp_list
-                ent_a = ent_b
-                ent_b = temp_ent
+                """
+                if hed_name_ans != []:
+                    max_index = np.argmax(np.array(hed_rate_name))
+                    max_ans = hed_name_ans[max_index]
+                    return [{max_ans[0]: {max_ans[1]: [max_ans[2]]}}]
+                """
 
-            ans_list = self.getRel(ent_a, ent_b)
+                """
+                有歧义选项，则询问具体是哪种att
+                """
+                print("hed_content_ans",hed_content_ans,ATT)
+                if hed_content_ans != [] and ATT!="":
 
-            ans_tring = ""
-            for al in ans_list:
-                ans_tring += ent_a
-                for a in al:
-                    ans_tring += ("的" + a)
-                ans_tring += ("是" + ent_b+"\n")
-            return ans_tring
+                    sbv_arr = self.askingBackByConAtt(hed_content_ans,ATT)
+                    if sbv_arr:
+                        return hed_content_ans,sbv_arr,hed_rate_cont,ATT,"hed_content_ans"
+
+                """
+                有歧义选项，则询问具体是哪种att
+                """
+                if hed_content_ans != []:
+                    max_index = np.argmax(np.array(hed_rate_cont))
+                    max_ans = hed_content_ans[max_index]
+
+                    return [{max_ans[0]: {max_ans[1]: [max_ans[2]]}}]
+
+                """
+                max_index = np.argmax(np.array(rate))
+                max_ans = answern[max_index]
+                return [{max_ans[0]: {max_ans[1]: [max_ans[2]]}}]
+                """
+                return None
+
+            else:
+                """
+                通过直接匹配属性得到结果，但结果可能有多条，所以需要再次筛选
+                """
+                print("==================属性名匹配===================")
+                answern = ans[0]
+                print("answern",answern)
+                """
+                如果结果只有一个实体那么就返回这个实体
+                实际上问题问的可能就是多个实体，如果返回的实体不止一个
+                
+                1. 匹配回答中的实体，如果出现在句子中，那么这个结果被认为是正确答案
+                2. 匹配回答中的属性值，如果属性值出现了抽取的实体，那么
+                
+                """
+
+                if len(answern.keys()) == 1:
+                    print(answern.keys())
+                    return ans
+                formed_name_ans = []
+                formed_cont_ans = []
+
+                for name, content in answern.items():
+                    """得到多实体回答问题"""
+                    if name in words:
+                        formed_name_ans.append({name: content})
+
+                    for fe in find_entity:
+                        con_values = list(content.values())[0]
+                        values = "".join(con_values)
+                        if self.judgeSub(fe, [values]):
+                            formed_cont_ans.append({name: content})
+
+
+                if formed_name_ans != []:
+                    print("formed_name_ans", formed_name_ans)
+                    return formed_name_ans
+
+                hed_name_ans, hed_content_ans = self.hedAnswer(answern,cut_words,arcs_dict,hed_index)
+
+                if hed_name_ans != []:
+                    print("hed_name_ans", hed_name_ans)
+                    return hed_name_ans
+                if hed_content_ans != []:
+                    print("hed_content_ans", hed_content_ans)
+
+                    return hed_content_ans
+                print("ans", ans)
+                return ans
 
         return None
 
@@ -973,14 +1158,27 @@ class matchWordsByPattern(object):
 #a = matchWordsByPattern()
 #a.getRel('中国','高原')
 
+
+
+
 if __name__ == '__main__':
     a = matchWordsByPattern()
     #ans = a.dealWithAsking("中国最大的淡水湖是鄱阳湖吗")
     #print(ans)
 
+
+
     while (1):
+
+        print("user:")
         s = input()
-        ans = a.dealWithAsking(s)
+        #ans = a.wordBywordAndCheck(s)
+
+        #print(list(jieba.cut(s)))
+        #jieba.load_userdict(project_path + '/data/allentity.csv')
+        #print(list(jieba.cut(s)))
+        #ans = a.dealWithAsking(s)
+        ans = a.dealWithAsking(s,True)
         print(ans)
     
 
