@@ -1,4 +1,5 @@
 # -*- coding: utf-8 -*-
 from .matchWords import *
-from .patternAnalysis import *
 from .LTPUtil import *
+from .analysisPattern2 import *
+from .formWords import *

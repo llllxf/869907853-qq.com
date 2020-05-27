@@ -1,5 +1,5 @@
 # @Language: python3
-# @File  : analysisPattern.py
+# @File  : analysisPattern2.py
 # @Author: LinXiaofei
 # @Date  : 2020-03-28
 """
@@ -7,8 +7,10 @@
 """
 import sys
 import os
+import numpy as np
 project_path = os.path.abspath(os.path.join(os.getcwd(), ".."))
 sys.path.append(project_path)
+from data.data_process import read_file
 
 
 class PatternMatch(object):
@@ -28,237 +30,279 @@ class PatternMatch(object):
         self.nluMatch = {'task_common':[['ent','pro'],['ent']],'task_difinition':[['ent'],['ent-pro'],['pro-ent']],
                          'task_rel':[['ent','ent','pro']],'task_btw_ent':[['ent','ent']]}
 
+        self.country = read_file(project_path + "/data/country.csv")
+        """
+        实体+属性
+        喜马拉雅山的特征是什么
+        什么是喜马拉雅山的特征
+        喜马拉雅山有哪些特征
+        """
+        self.entproN = ['ent-pro-V-R','R-V-ent-pro','ent-V-R-pro']
+
+        """
+        喜马拉雅山怎么形成的
+        怎么形成喜马拉雅山的
+        喜马拉雅山是怎么形成的 'ent-V-R-pro'
+        """
+        self.entproV = ['ent-R-hed&pro','R-hed&pro-ent','ent-V-R-pro']
 
 
-
-    def judgeSyntax(self,words):
+        """
+        实体+关系
+        中国的首都是什么
+        什么是中国的首都
+        中国的首都在哪
+        
+        中国的首都是什么城市
+        什么城市是中国的首都
+        中国的首都在哪个城市
+        
+        ent-rel
+        
+        俄罗斯位于哪里
+        俄罗斯位于什么洲
         """
 
-        :param words:
+        self.entrelN = ['ent-rel-V-R','R-V-ent-rel']
+        self.entrelNN = ['ent-rel-V-R-ent','R-ent-V-ent-rel']
+        self.entrelV = ['ent-hed&rel-R']
+        self.entrelVV = ['ent-hed&rel-R-ent']
+
+
+        """
+        关系+关系值(实体)+实体类型-->实体
+        
+        向下找子类，得到相关属性/关系的属性关系值，匹配属性/关系的值，找到对应的实体
+        """
+        """
+        北京是哪个国家的首都，哪个国家的首都是北京，首都是北京的是哪个国家，首都是北京的是哪个国家
+        位于俄罗斯的淡水湖有哪些，有哪些淡水湖位于俄罗斯，哪些淡水湖位于俄罗斯，有哪些位于俄罗斯的淡水湖
+        """
+        self.relEtypeN = ['ent-V-R-ent-rel','R-ent-rel-V-ent','rel-V-ent-R-ent']
+
+        self.relEtypeV = ['rel-ent-ent-V-R','V-R-ent-rel-ent','R-ent-hed&rel-ent','V-R-rel-ent-ent']
+
+        """
+        属性名+属性值+实体类型-->实体
+        闽是哪个省的简称 哪个省的简称是闽 
+        
+        向下找子类，得到相关属性/关系的属性关系值，匹配属性/关系的值，找到对应的实体
+        
+        """
+
+        self.pronvEtype = ['V-R-ent-pro','R-ent-pro-V','pro-ent-V-R']
+
+    def matchSingalEntity(self,pattern,pattern_index,cut_words):
+        entity = []
+        property = []
+        keywords = []
+        count = 0
+        index = 0
+        temp_entity = []
+        pattern_array = pattern.split("-")
+        r_index = pattern_array.index("R")
+
+        dis = 100000000
+        entity_index = -1
+        for pa in pattern_array:
+            if pa == "ent":
+
+                temp_dis = np.abs(pattern_index[index]-r_index)
+                if temp_dis <= dis:
+                    entity_index = pattern_index[index]
+            index = index+1
+        if entity_index != -1:
+            entity.append(cut_words[entity_index])
+
+            return entity, property, keywords, "task_singal_entity"
+        return None,None,None,None
+
+
+    def matchPattern(self,pattern,pattern_index,cut_words):
+
+
+        """
+
+        :param pattern: 句子得到的模版
+        :param pattern_index: 模版中的元素在分词中的下标
+        :param cut_words: 分词
         :return:
         """
-        for name,context in self.syntaxMatch.items():
-            for con in context:
-                flag = True
-                for c in con:
-                    if c  not in words:
-                        flag = False
-                        break
-                if flag:
-                    return name
-        return "task_normal"
+        entity = []
+        property = []
+        keywords = []
+        task_type = None
 
-    def judgeNlu(self,pattern):
-        """
+        if pattern in self.entproN:
+            """实体+属性n"""
+            key_array = pattern.split("-")
+            index = 0
+            for pa in key_array:
+                if pa == 'ent':
+                    entity.append(cut_words[pattern_index[index]])
+                if pa == 'pro' or pa == 'hed&pro':
+                    property.append(cut_words[pattern_index[index]])
+                index = index + 1
+            return entity, property, "","task_normal_pro"
 
-        :param words: 问句
-        :return: 认为类型
-        """
-
-        """
-        只有一个实体，则介绍实体
-        """
-        for context in self.nluMatch['task_difinition']:
-
-            if pattern == context[0]:
-                return 'task_difinition'
-
-        """
-        有两个即以上实体和至少一个属性则处理多个实体与该属性的关系
-        """
-        if 'pro' in pattern and 'ent' in pattern:
-            first_index = pattern.find('ent')
-            print(pattern[first_index:])
-            if 'ent' in pattern[first_index:]:
-                return 'task_rel'
-
-        """
-        有多个实体没有属性
-        """
-        for context in self.nluMatch['task_btw_ent']:
-            flag = True
-            index = -1
-            for con in context:
-                temp_index = pattern[index+1:].find(con)
-                if temp_index <= index:
-                    print(con,temp_index,index,pattern[index+1])
-
-                    flag = False
-                    break
-                else:
-                    index = temp_index
-            if flag:
-                return 'task_rel'
-
-        """
-        有一个实体
-        """
-        #print(self.nluMatch['task_common'])
-        for context in self.nluMatch['task_common']:
-
-            for con in context:
-
-                flag = True
-                if con not in pattern:
-                    flag = False
-                    break
-            if flag:
-                return "task_common"
-
-        return None
-
-    def findContry(self,father_dict):
-        """
-
-        :param father_dict:
-        :return:
-        """
-        for son,fl in father_dict.items():
-            if "国家" in fl or "城市" in fl:
-                return son
-        else:
-            return None
+        if pattern in self.entproV:
+            """实体+属性v"""
 
 
+            key_array = pattern.split("-")
+            index = 0
+            for pa in key_array:
+                if pa == 'ent':
+                    entity.append(cut_words[pattern_index[index]])
+                if pa == 'pro' or pa == 'hed&pro':
+                    property.append(cut_words[pattern_index[index]])
+                index = index + 1
 
-    def judgeRel(self,father_dict,entity_for_sort):
+            return entity, property, "","task_normal_pro"
 
-        """
-        :param father_dict:
-        :param entity_for_sort:
-        :return:
-        """
-        """两个实体同类的情况"""
-        #print(father_dict,entity_for_sort)
-        ori_entity = entity_for_sort[0][0]
-        ori_father = father_dict[ori_entity]
-        stop_entity = []
+        if pattern in self.entrelN:
+            """实体+关系n"""
+            key_array = pattern.split("-")
+            index = 0
+            for pa in key_array:
+                if pa == 'ent':
+                    entity.append(cut_words[pattern_index[index]])
+                if pa == 'rel' or pa == 'hed&rel':
+                    property.append(cut_words[pattern_index[index]])
+                index = index + 1
 
+            return entity, property, "","task_normal_rel"
 
+        if pattern in self.entrelNN:
+            """实体+关系n"""
+            key_array = pattern.split("-")
+            index = 0
+            for pa in key_array:
+                if pa == 'rel' or pa == 'hed&rel':
+                    property.append(cut_words[pattern_index[index]])
+                    entity.append(cut_words[pattern_index[index - 1]])
+                index = index + 1
+            return entity, property, "","task_normal_rel"
 
-        formed_entity = []
-        son = self.findContry(father_dict)
-        """
-        存在国家实体
-        """
-        if son:
-            ori_entity = son
-            ori_father = father_dict[son]
-            #stop_entity.append(ori_entity)
-            """
-            只有两个实体时
-            """
-            if len(entity_for_sort) == 2:
-                for oe in entity_for_sort:
-                    if oe[0] == son:
+        if pattern in self.entrelV:
+            """实体+关系v"""
+
+            key_array = pattern.split("-")
+            index = 0
+            for pa in key_array:
+                if pa == 'ent':
+                    entity.append(cut_words[pattern_index[index]])
+                if pa == 'rel' or pa == 'hed&rel':
+                    property.append(cut_words[pattern_index[index]])
+                index = index + 1
+            return entity, property, "","task_normal_rel"
+
+        if pattern in self.entrelVV:
+            """实体+关系v"""
+
+            key_array = pattern.split("-")
+            index = 0
+            for pa in key_array:
+                if pa == 'rel' or pa == 'hed&rel':
+                    property.append(cut_words[pattern_index[index]])
+                    entity.append(cut_words[pattern_index[index - 1]])
+                index = index + 1
+            return entity, property, "","task_normal_rel"
+
+        if pattern in self.relEtypeV:
+            """关系(名词性)+关系值(实体)+实体类型"""
+
+            pattern_array = pattern.split("-")
+            index = 0
+            if 'rel' in pattern_array:
+                rel_index = pattern_array.index('rel')
+            elif 'hed&rel' in pattern_array:
+                rel_index = pattern_array.index('hed&rel')
+            property.append(cut_words[pattern_index[rel_index]])
+            keywords.append(cut_words[pattern_index[rel_index + 1]])
+            for pa in pattern_array:
+                if pa == 'ent' :
+                    if index == rel_index + 1:
+                        index = index + 1
                         continue
-                    formed_entity.append(oe[0])
-                    father = father_dict[oe[0]]
-                    if father==[] or father==None:
-                        return "task_position_limit", formed_entity
-                    for f in father:
-                        if f in ori_father:
-                            formed_entity.append(son)
-                            return "task_same_level",formed_entity
-                        else:
-                            return "task_position_limit", formed_entity
+                    entity.append(cut_words[pattern_index[index]])
+                index = index + 1
+
+            return entity, property, keywords,"task_son_kw_match"
+
+        if  pattern  =='ent-V-R-ent-rel':
+            """关系(动词性)+关系值(实体)+实体类型"""
+            keywords.append(cut_words[pattern_index[0]])
+            entity.append(cut_words[pattern_index[3]])
+            property.append(cut_words[pattern_index[4]])
+            return entity, property, keywords,"task_son_kw_match"
+        if  pattern == 'R-ent-rel-V-ent':
+            keywords.append(cut_words[pattern_index[4]])
+            entity.append(cut_words[pattern_index[1]])
+            property.append(cut_words[pattern_index[2]])
+            return entity, property, keywords,"task_son_kw_match"
+        if  pattern == 'rel-V-ent-R-ent':
+            keywords.append(cut_words[pattern_index[2]])
+            entity.append(cut_words[pattern_index[4]])
+            property.append(cut_words[pattern_index[0]])
+            return entity, property, keywords,"task_son_kw_match"
+
+        """
+        属性名 + 属性值 + 实体类型 -->实体
+        闽是哪个省的简称
+        哪个省的简称是闽
+        发源地在云南省乌蒙山东南侧的河流是哪个
+
+        向下找子类，得到相关属性 / 关系的属性关系值，匹配属性 / 关系的值，找到对应的实体
+
+        self.pronvEtype = ['#V-R-ent-pro',
+                           'R-ent-pro-V#',
+                           'pro#ent-V-R']
+        """
+        if 'pro' in pattern and 'V' in pattern:
+            pattern_array = pattern.split("-")
+            v_index = pattern.index('V')
+            v_word_index = pattern_array.index('V')
+            front = pattern[:v_index + 1]
+            print("front", front)
+            back = pattern[v_index:]
+            print("front", back)
+
+            if front == 'R-ent-pro-V':
+                print('v_word_index', pattern_index[v_word_index])
+                match_one = "".join(cut_words[:pattern_index[v_word_index]])
+                print("match_one", match_one)
+                entity.append(cut_words[pattern_index[1]])
+                property.append(cut_words[pattern_index[2]])
+                return entity, property, match_one, 'task_son_match'
 
 
-            for se in entity_for_sort:
-                if se[0] == son or father_dict[se[0]]==[] or father_dict[se[0]]==None:
-                    stop_entity.append(se[0])
-                    continue
-                else:
-                    sec_ent = se[0]
-                    break
-            sec_father = father_dict[sec_ent]
-            stop_entity.append(sec_ent)
-            #print(son,ori_father)
-            #print(sec_ent,sec_father)
+            elif back == 'V-R-ent-pro':
 
-            """
-            多个国家实体
-            """
-            for sf in sec_father:
-                if sf == '地理概念' or sf == '地理事实' or sf == '地理方法' or sf == '地理原理' or \
-                        sf == '常识概念' or sf == "地理过程" or sf == "地理关系":
-                    continue
-                if sf in ori_father:
-                    formed_entity.append(son)
-                    formed_entity.append(sec_ent)
+                print('v_word_index', pattern_index[v_word_index])
+                match_one = "".join(cut_words[:pattern_index[v_word_index]])
+                print("match_one", match_one)
+                entity.append(cut_words[pattern_index[-2]])
+                property.append(cut_words[pattern_index[-1]])
+                return entity, property, match_one, 'task_son_match'
 
-                    for oe in entity_for_sort:
-                        if oe[0] in stop_entity:
-                            continue
-                        else:
-                            oe_father = father_dict[oe[0]]
-                            for oef in oe_father:
-                                if oef == '地理概念' or oef == '地理事实' or oef == '地理方法' or oef == '地理原理' or \
-                                        oef == '常识概念' or oef == "地理过程" or oef == "地理关系":
-                                    continue
-                                if oef in sec_father:
-                                    formed_entity.append(oe[0])
-                                    #print(formed_entity)
-                    return "task_same_level", formed_entity
+            elif pattern_array[0] == 'pro' and pattern_array[-1] == 'R' and pattern_array[-2] == 'V' and pattern_array[
+                -3] == 'ent':
+                entity.append(cut_words[pattern_index[-3]])
+                property.append(cut_words[pattern_index[0]])
 
-            if True:
-                """
-                limit
-                1. 只有一个非国家实体
-                2. 多个非国家实体
-                """
+                match_one = "".join(cut_words[pattern_index[0]+1:pattern_index[-3]])
+                print("match_one",match_one,pattern_index[1],pattern_index[-3])
 
+                return entity,property,match_one,'task_son_match'
 
-                formed_entity.append(sec_ent)
-
-                for se in entity_for_sort:
-                    if se[0] in stop_entity:
-                        continue
-
-                    father = father_dict[se[0]]
-                    #print(se[0],father)
-
-                    for of in sec_father:
-                        if of == '地理概念' or of == '地理事实' or of == '地理方法' or of == '地理原理' or \
-                                of == '常识概念':
-                            continue
-                        if of in father:
-                            formed_entity.append(se[0])
-                            break
-                if formed_entity != []:
-
-                    return "task_position_limit", formed_entity
-                else:
-                    print("how can it possible")
-                    return "task_position_limit", []
-
-        else:
-            """
-            不存在国家实体
-            1.同级
-            2.没有关系
-            """
-            for se in entity_for_sort[1:]:
-                father = father_dict[se[0]]
-                for of in ori_father:
-                    if of == '地理概念' or of == '地理事实' or of == '地理方法' or of == '地理原理' or \
-                            of == '常识概念':
-                        continue
-                    if of in father:
-                        formed_entity.append(se[0])
-                        break
-            if formed_entity != []:
-                formed_entity.append(ori_entity)
-                #print(formed_entity)
-                return "task_same_level", formed_entity
-            else:
-                return None,None
+        return None,None,None,None
 
 if __name__ == '__main__':
 
     p = PatternMatch()
-    ans = p.judgeNlu("entblkent-pro")
-    print(ans)
+
+
 
 
 

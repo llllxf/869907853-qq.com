@@ -1,0 +1,149 @@
+# !/usr/bin/env python3
+# -*- coding: utf-8 -*-
+import os
+import sys
+project_path = os.path.abspath(os.path.join(os.getcwd(), "../../.."))
+
+from pyltp import Postagger, Parser
+
+class LTPUtil(object):
+
+
+    def __init__(self):
+
+        """
+        词性标注
+        """
+        self.postagger = Postagger()
+        self.postagger.load(project_path + "/ltp_data_v3.4.0/pos.model")
+
+
+        """
+        句法依存分析
+        """
+        self.parser = Parser()
+        self.parser.load(os.path.join(project_path + "/ltp_data_v3.4.0/parser.model"))
+
+
+        """
+        疑问代词
+        """
+        self.Interrogative_pronouns = ['哪里', '什么', '怎么', '哪', '为什么', '啥','谁']
+        self.noun_for_pedia = ['n', 'nh', 'ni', 'nl', 'ns', 'nz', 'nt','i']
+        self.clear_word = ['嗯','噫','啊','哦']
+
+
+    """
+    :describe 词性分析
+    :arg 分词列表
+    """
+
+
+    def get_postag(self, words):
+        postags = self.postagger.postag(words)
+        return postags
+
+    """
+    :describe 句法依存
+    :arg 分词列表, 词性列表
+    """
+
+
+    def get_parse(self, words, postags):
+        parse = self.parser.parse(words, postags)
+        return parse
+
+    """
+    :describe 
+    得到问题对应的模版
+    1.先对问题分词
+    2.得到每个分词对应的词性
+    3.得到句法依存分析树
+
+    :arg 句子
+    """
+
+
+    def get_sentence_pattern(self, words):
+        print("words111",words)
+        postags = self.get_postag(words)
+
+        arcs = self.parser.parse(words, postags)
+        print("arcs222",arcs)
+        arcs_dict = self._build_sub_dicts(words, arcs)
+        hed_index = 0
+
+        # for i in range(len(words)):
+        # print(words[i],postags[i],arcs_dict[i])
+        pattern = ""
+        for i in range(len(arcs)):
+            sub_arc = arcs[i]
+            if sub_arc.relation == 'HED':
+                hed_index = i
+
+        for i in range(len(words)):
+            if i == hed_index:
+                pattern += 'HED'
+            for sub_dict in arcs_dict:
+                keys = sub_dict.keys()
+                for k in keys:
+                    if i in sub_dict[k]:
+                        pattern += k
+                        break
+        # print(pattern)
+        return pattern, arcs_dict, postags, hed_index
+
+
+    """
+    :decription: 为句子中的每个词语维护一个保存句法依存儿子节点的字典
+    :args:
+    words: 分词列表
+    postags: 词性列表
+    arcs: 句法依存列表
+    """
+
+
+    def _build_sub_dicts(self, words, arcs):
+        sub_dicts = []
+        for idx in range(len(words)):
+            sub_dict = dict()
+            for arc_idx in range(len(arcs)):
+                """
+                如果这个依存关系的头节点是该单词
+                """
+                if arcs[arc_idx].head == idx + 1:
+                    if arcs[arc_idx].relation in sub_dict:
+                        sub_dict[arcs[arc_idx].relation].append(arc_idx)
+                    else:
+                        sub_dict[arcs[arc_idx].relation] = []
+                        sub_dict[arcs[arc_idx].relation].append(arc_idx)
+            sub_dicts.append(sub_dict)
+
+        return sub_dicts
+
+    """
+    :decription:完善识别的部分实体
+    """
+
+    def _fill_ent(self, words, postags, sub_dicts, word_idx):
+        sub_dict = sub_dicts[word_idx]
+        prefix = ''
+        if 'ATT' in sub_dict:
+            for i in range(len(sub_dict['ATT'])):
+                prefix += self._fill_ent(words, postags, sub_dicts, sub_dict['ATT'][i])
+
+        postfix = ''
+        if postags[word_idx] == 'v':
+            if 'VOB' in sub_dict:
+                postfix += self._fill_ent(words, postags, sub_dicts, sub_dict['VOB'][0])
+            if 'SBV' in sub_dict:
+                prefix = self._fill_ent(words, postags, sub_dicts, sub_dict['SBV'][0]) + prefix
+
+        return prefix + words[word_idx] + postfix
+
+
+if __name__=='__main__':
+    s = input()
+    LTPUtil()
+    words, pattern, arcs_dict, postags, hed_index = LTPUtil.get_sentence_pattern(['中国','最大','淡水湖'])
+    print(words, pattern, arcs_dict, list(postags), hed_index)

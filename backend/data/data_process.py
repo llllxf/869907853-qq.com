@@ -14,6 +14,8 @@ def read_file(filename):
         lines = rf.readlines()
         for line in lines:
             line = line.strip('\n')
+            if line == "":
+                continue
             array.append(line)
 
     rf.close()
@@ -51,4 +53,19 @@ def clean_repeat():
             continue
         cla = cla.strip("\n")
         cw.writelines(cla+"\n")
+
+if __name__ == '__main__':
+    add = open("add.txt","w")
+    geo = read_file('allentity.csv')
+    geoall = read_file('ent_geo_all.csv')
+    for ga in geoall:
+        if ga not in geo:
+            add.writelines(ga)
+            add.writelines("\n")
+    add.close()
+    print("=================================================")
+
+    for g in geo:
+        if g not in geoall:
+            print(g)
 

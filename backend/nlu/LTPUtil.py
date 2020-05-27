@@ -68,11 +68,10 @@ class LTPUtil(object):
 
         postags = self.get_postag(words)
         arcs = self.parser.parse(words, postags)
-        arcs_dict = self._build_sub_dicts(words, arcs)
+
+        arcs_dict,reverse_arcs_dict = self._build_sub_dicts(words, arcs)
         hed_index = 0
 
-        # for i in range(len(words)):
-        # print(words[i],postags[i],arcs_dict[i])
         pattern = ""
         for i in range(len(arcs)):
             sub_arc = arcs[i]
@@ -81,15 +80,17 @@ class LTPUtil(object):
 
         for i in range(len(words)):
             if i == hed_index:
-                pattern += 'HED'
+                pattern += 'HED-'
             for sub_dict in arcs_dict:
                 keys = sub_dict.keys()
                 for k in keys:
                     if i in sub_dict[k]:
-                        pattern += k
+                        pattern += k+"-"
                         break
-        # print(pattern)
-        return pattern, arcs_dict, postags, hed_index
+
+        if pattern[-1] == '-':
+            pattern = pattern[:-1]
+        return pattern, arcs_dict, reverse_arcs_dict,postags, hed_index
 
 
     """
@@ -103,6 +104,7 @@ class LTPUtil(object):
 
     def _build_sub_dicts(self, words, arcs):
         sub_dicts = []
+        sub_dicts2 = []
         for idx in range(len(words)):
             sub_dict = dict()
             for arc_idx in range(len(arcs)):
@@ -116,8 +118,22 @@ class LTPUtil(object):
                         sub_dict[arcs[arc_idx].relation] = []
                         sub_dict[arcs[arc_idx].relation].append(arc_idx)
             sub_dicts.append(sub_dict)
+        for i in range(len(words)):
+            sub_dicts2.append({})
+        for idx in range(len(words)):
+            for arc_idx in range(len(arcs)):
+                """
+                如果这个依存关系的头节点是该单词
+                """
+                if arcs[arc_idx].head == idx + 1:
+                    if arcs[arc_idx].relation in sub_dicts2[arc_idx].keys():
+                        sub_dicts2[arc_idx][arcs[arc_idx].relation].append(idx)
+                    else:
+                        sub_dicts2[arc_idx][arcs[arc_idx].relation] = []
+                        sub_dicts2[arc_idx][arcs[arc_idx].relation].append(idx)
+        #print("sub_dicts2",sub_dicts2)
 
-        return sub_dicts
+        return sub_dicts,sub_dicts2
 
     """
     :decription:完善识别的部分实体
