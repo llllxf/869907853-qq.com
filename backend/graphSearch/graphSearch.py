@@ -32,7 +32,7 @@ class graphSearch(object):
         :param type:
         :return:
         """
-        uri = "http://127.0.0.1:8004/getRelByType?repertoryName=geo4&type="+type
+        uri = "http://10.10.1.202:8004/getRelByType?repertoryName=geo4&type="+type
         r = requests.post(uri)
         rel_list = list(r.json())
 
@@ -44,7 +44,7 @@ class graphSearch(object):
         :param type:
         :return:
         """
-        uri = "http://127.0.0.1:8004/getProByType?repertoryName=geo4&type="+type
+        uri = "http://10.10.1.202:8004/getProByType?repertoryName=geo_all&type="+type
         r = requests.post(uri)
         pro_list = list(r.json())
 
@@ -57,11 +57,13 @@ class graphSearch(object):
         :return:
         """
         print("label",label)
-        uri = "http://127.0.0.1:8004/getProPredicate?repertoryName=geo4&label="+label
+        uri = "http://10.10.1.202:8004/getProPredicate?repertoryName=geo4&label="+label
         r = requests.post(uri)
-        predicate = list(r.json())[0]
-
-        return predicate
+        ans = list(r.json())
+        if len(ans)>0:
+            predicate = list(r.json())[0]
+            return predicate
+        return None
 
     def getRelPredicate(self,label):
         """
@@ -69,10 +71,10 @@ class graphSearch(object):
         :param label:
         :return:
         """
-        uri = "http://127.0.0.1:8004/getRelPredicate?repertoryName=geo4&label="+label
+        uri = "http://10.10.1.202:8004/getRelPredicate?repertoryName=geo4&label="+label
         r = requests.post(uri)
         predicate = list(r.json())[0]
-        print(predicate)
+
         return predicate
 
     def getSubject(self,label):
@@ -81,7 +83,8 @@ class graphSearch(object):
         :param label:
         :return:
         """
-        uri = "http://127.0.0.1:8004/getSubject?repertoryName=geo4&label="+label
+        uri = "http://10.10.1.202:8004/getSubject?repertoryName=geo4&label="+label
+        #print("label",label)
         r = requests.post(uri)
         subject = list(r.json())[0]
         return subject
@@ -93,7 +96,7 @@ class graphSearch(object):
         :param property:
         :return:
         """
-        uri = "http://127.0.0.1:8004/getValueByPro?repertoryName=geo4&entityType=" + type+"&property="+property
+        uri = "http://10.10.1.202:8004/getValueByPro?repertoryName=geo4&entityType=" + type+"&property="+property
         r = requests.post(uri)
         value_list = list(r.json())
         return value_list
@@ -104,7 +107,7 @@ class graphSearch(object):
         :param data:
         :return:
         """
-        uri = "http://127.0.0.1:8004/resetTripleToRepertory?"
+        uri = "http://10.10.1.202:8004/resetTripleToRepertory?"
         ret = requests.post(uri, data=data)
         print(ret)
 
@@ -114,7 +117,7 @@ class graphSearch(object):
         :param data:
         :return:
         """
-        uri = "http://127.0.0.1:8004/resetRelTripleToRepertory?"
+        uri = "http://10.10.1.202:8004/resetRelTripleToRepertory?"
         ret = requests.post(uri, data=data)
         print(ret)
 
@@ -125,7 +128,7 @@ class graphSearch(object):
         :param property:
         :return:
         """
-        uri = "http://127.0.0.1:8004/getValueByRel?repertoryName=geo4&entityType=" + type+"&relation="+property
+        uri = "http://10.10.1.202:8004/getValueByRel?repertoryName=geo4&entityType=" + type+"&relation="+property
         r = requests.post(uri)
         value_list = list(r.json())
         return value_list
@@ -139,7 +142,20 @@ class graphSearch(object):
         :return:
         """
         data = {'repertoryName': 'geo4', 'tripleList': str(tripleList)}
-        uri = "http://127.0.0.1:8004/addTripleToRepertory?"
+        uri = "http://10.10.1.202:8004/addTripleToRepertory?"
+        ret = requests.post(uri, data=data)
+        print(ret)
+
+    def addRelTripleToRepertory(self,tripleList):
+        """
+        添加属性(现有)
+        :param subj:
+        :param pred:
+        :param obje:
+        :return:
+        """
+        data = {'repertoryName': 'geo4', 'tripleList': str(tripleList)}
+        uri = "http://10.10.1.202:8004/addRelToRepertory?"
         ret = requests.post(uri, data=data)
         print(ret)
 
@@ -152,9 +168,74 @@ class graphSearch(object):
         :return:
         """
         data = {'repertoryName': 'geo4', 'tripleList': str(tripleList)}
-        uri = "http://127.0.0.1:8004/deleteTripleToRepertory?"
+        uri = "http://10.10.1.202:8004/deleteTripleToRepertory?"
         ret = requests.post(uri, data=data)
         print(ret)
+
+    def deleteRelToRepertory(self,tripleList):
+        """
+        添加属性(现有)
+        :param subj:
+        :param pred:
+        :param obje:
+        :return:
+        """
+        data = {'repertoryName': 'geo4', 'tripleList': str(tripleList)}
+        uri = "http://10.10.1.202:8004/deleteRelToRepertory?"
+        ret = requests.post(uri, data=data)
+        print(ret)
+
+    def deleteProperty(self,label):
+
+        propertyUri = self.getPredicate(label)
+        print(propertyUri)
+        data = {'repertoryName': 'geo4', 'propertyUri': propertyUri}
+        uri = "http://10.10.1.202:8004/deleteCurProperty?"
+        ret = requests.post(uri,data=data)
+        print(ret)
+
+    def deleteRelation(self,label):
+
+        propertyUri = self.getRelPredicate(label)
+        print(propertyUri)
+        data = {'repertoryName': 'geo4', 'propertyUri': propertyUri}
+        uri = "http://10.10.1.202:8004/deleteCurProperty?"
+        ret = requests.post(uri,data=data)
+        print(ret)
+
+    def addProperty(self,propertyName,pinyinName):
+
+        data = {'repertoryName': 'geo4', 'propertyName': propertyName, 'pinyinName':pinyinName}
+        uri = "http://10.10.1.202:8004/addProperty?"
+        ret = requests.post(uri, data=data)
+        print(ret)
+
+    def addRelation(self, relationName, pinyinName):
+
+        data = {'repertoryName': 'geo4', 'relationName': relationName, 'pinyinName': pinyinName}
+        uri = "http://10.10.1.202:8004/addRelation?"
+        ret = requests.post(uri, data=data)
+        print(ret)
+
+
+    #======================================self modify=========================================
+    def completionGraph(self,ent,type):
+
+        print(ent,type)
+        uri = "https://api.ownthink.com/kg/knowledge?entity=" + ent
+        r = requests.post(uri)
+
+        if r.json()['message'] == 'success':
+
+            ans_dict = dict(r.json()['data'])
+            if 'tag' in ans_dict.keys():
+                if type in list(r.json()['data']['tag']):
+                    inf_dict = dict(r.json()['data']['avp'])
+
+                    return inf_dict
+        return None
+
+    # ======================================pedia modify=========================================
 
 
 
@@ -168,7 +249,7 @@ class graphSearch(object):
         :return:
         """
 
-        uri = "http://127.0.0.1:8004/fuzzySearch?repertoryName=geo&words=" + words
+        uri = "http://10.10.1.202:8004/fuzzySearch?repertoryName=geo&words=" + words
         r = requests.post(uri)
         ent_list = list(r.json())
 
@@ -183,12 +264,12 @@ class graphSearch(object):
         """
 
         """获取属性信息"""
-        uri = "http://127.0.0.1:8004/getEntityByLabelWithPro?repertoryName=geo4&entityName=" + entity
+        uri = "http://10.10.1.202:8004/getEntityByLabelWithPro?repertoryName=geo4&entityName=" + entity
         r = requests.post(uri)
         pro_list = list(r.json())
 
         """获取关系信息"""
-        uri = "http://127.0.0.1:8004/getEntityByLabelWithRel?repertoryName=geo4&entityName=" + entity
+        uri = "http://10.10.1.202:8004/getEntityByLabelWithRel?repertoryName=geo4&entityName=" + entity
         r = requests.post(uri)
         rel_list = list(r.json())
         return pro_list, rel_list
@@ -202,7 +283,7 @@ class graphSearch(object):
         """
 
         """获取属性信息"""
-        uri = "http://127.0.0.1:8004/getEntityByLabelWithProName?repertoryName=geo4&entityName=" + entity
+        uri = "http://10.10.1.202:8004/getEntityByLabelWithProName?repertoryName=geo4&entityName=" + entity
         r = requests.post(uri)
         pro_list = list(r.json())
         return pro_list
@@ -316,7 +397,7 @@ class graphSearch(object):
         :return: 实体的属性/关系名
         """
 
-        uri = "http://127.0.0.1:8004/getPro?repertoryName=geo4&entity=" + entity
+        uri = "http://10.10.1.202:8004/getPro?repertoryName=geo4&entity=" + entity
         r = requests.post(uri)
         pro_list = list(r.json())
 
@@ -333,7 +414,7 @@ class graphSearch(object):
         """
 
         """获取子类"""
-        uri = "http://127.0.0.1:8004/getEntityByType?repertoryName=geo4&entityName=" + etype
+        uri = "http://10.10.1.202:8004/getEntityByType?repertoryName=geo4&entityName=" + etype
         r = requests.post(uri)
         son_list = list(r.json())
 
@@ -350,7 +431,7 @@ class graphSearch(object):
         """
 
         """获取父类"""
-        uri = "http://127.0.0.1:8004/getFatherByType?repertoryName=geo4&entityName=" + entity
+        uri = "http://10.10.1.202:8004/getFatherByType?repertoryName=geo4&entityName=" + entity
         r = requests.post(uri)
         father_list = list(r.json())
 
@@ -367,9 +448,10 @@ class graphSearch(object):
         :return: 实体列表
         """
 
-        uri = "http://127.0.0.1:8004/entitySearch?repertoryName=geo4&entity="+entity+"&relation="+property+"&type="+keyword
+        uri = "http://10.10.1.202:8004/entitySearch?repertoryName=geo4&entity="+entity+"&relation="+property+"&type="+keyword
         r = requests.post(uri)
         son_list = list(r.json())
+        print("son_list",son_list)
 
         if son_list == []:
             return None
@@ -538,56 +620,36 @@ class graphSearch(object):
             return ans_con[max_index]
         return None
 
-    def directAnsProCon2(self, words, deal_entity):
-        """
-        根据实体携带的属性信息和问句原文匹配得到与答案相符的属性信息
-        1. 遍历实体所有的属性信息
-        2. 按字符匹配问句和属性信息
-        3. 2得到空则按向量相似度得到匹配信息
-        4. 2,3均空则返回空
-        :param words: 问句
-        :param deal_entity: 实体及其信息
-        :return: 答案或空
-        """
+    def getSubByLimit(self, keyword, entity):
 
-        form_words = self.form_util.preProcessWords(words)
-        print("form_words",form_words)
-        ans_con = []
-        count_rate = []
+        sub_entity = []
+
+        son_list = self.getEntityByType(entity[0])
+        deal_entity = self.dealWithEnitity(son_list)
 
         for name, content in deal_entity.items():
+            flag = False
 
-            """
-            抽取出的实体的属性
-            """
+            rel = np.array((content['r']))
+            for r in rel:
+                if keyword[0] in r[1]:
+                    sub_entity.append(name)
+                    flag = True
+                    break
+
+            if flag:
+                continue
+
             pro = np.array(content['p'])
-
-            """
-            去掉问题中的实体方便匹配
-            """
-            while (name in form_words):
-                form_words = form_words.replace(name, '')
-
             for p in pro:
+                if keyword[0] in p[1]:
+                    sub_entity.append(name)
+                    break
 
-                con = self.form_util.preProcessWords(p[1])
 
-                while (name in con):
-                    con = con.replace(name, '')
+        if sub_entity != []:
 
-                if len(con) > len(form_words):
-                    c_len = len(form_words)
-                    count = self.seacrchAll(con, form_words)
-                else:
-                    c_len = len(con)
-                    count = self.seacrchAll(form_words, con)
-                if float(count) / float(c_len) >= 0.65:
-                    ans_con.append([name, p[0], p[1]])
-                    count_rate.append(count / c_len)
-        if ans_con != []:
-            print("ans_con",ans_con)
-            max_index = np.argmax(np.array(count_rate))
-            return ans_con[max_index]
+            return sub_entity
         return None
 
     def downFindAnsByWords(self,words, entity,property):
@@ -627,6 +689,11 @@ class graphSearch(object):
         #print("taskSonMatch",ans)
         return ans
 
+    def taskProMatch(self,words,entity,property):
+        ans = self.downFindAnsByWords(words,entity,property)
+        #print("taskSonMatch",ans)
+        return ans
+
     def taskSonKeyWord(self,entity,property,keyword):
         ans = self.downFindAnsByRel(entity, property, keyword)
         #print("taskSonKeyWord",ans)
@@ -634,14 +701,20 @@ class graphSearch(object):
 
     def taskProName(self,words,entity):
         ans = self.downFindAnsByEnt(words,entity)
-        #print("taskProName",ans)
         return ans
 
     def taskReverse(self,words,key_words):
-
         triple = self.getEntByfuzzySearch(key_words[0])
         ans = self.matchFuzzySearch(words,triple)
         return ans
+
+    def taskLimitSub(self,key_words,entity):
+        ans = self.getSubByLimit(key_words,entity)
+        return ans
+
+
+
+
 
 
 

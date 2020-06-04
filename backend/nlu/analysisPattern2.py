@@ -279,6 +279,228 @@ class PatternMatch(object):
             entity.append(cut_words[pattern_index[4]])
             property.append(cut_words[pattern_index[0]])
             return entity, property, keywords,"task_son_kw_match"
+
+        if 'pro' in pattern and 'V' in pattern:
+            pattern_array = pattern.split("-")
+            v_index = pattern.index('V')
+            v_word_index = pattern_array.index('V')
+            front = pattern[:v_index + 1]
+            print("front", front)
+            back = pattern[v_index:]
+            print("front", back)
+
+            if front == 'R-ent-pro-V':
+                print('v_word_index', pattern_index[v_word_index])
+                match_one = "".join(cut_words[:pattern_index[v_word_index]])
+                print("match_one", match_one)
+                entity.append(cut_words[pattern_index[1]])
+                property.append(cut_words[pattern_index[2]])
+                return entity, property, match_one, 'task_son_match'
+
+
+            elif back == 'V-R-ent-pro':
+
+                print('v_word_index', pattern_index[v_word_index])
+                match_one = "".join(cut_words[:pattern_index[v_word_index]])
+                print("match_one", match_one)
+                entity.append(cut_words[pattern_index[-2]])
+                property.append(cut_words[pattern_index[-1]])
+                return entity, property, match_one, 'task_son_match'
+
+            elif pattern_array[0] == 'pro' and pattern_array[-1] == 'R' and pattern_array[-2] == 'V' and pattern_array[
+                -3] == 'ent':
+                entity.append(cut_words[pattern_index[-3]])
+                property.append(cut_words[pattern_index[0]])
+
+                match_one = "".join(cut_words[pattern_index[0]+1:pattern_index[-3]])
+                print("match_one",match_one,pattern_index[1],pattern_index[-3])
+
+                return entity,property,match_one,'task_son_match'
+
+        return None,None,None,None
+    def matchPattern2(self,pattern,pattern_index,cut_words):
+
+
+        """
+
+        :param pattern: 句子得到的模版
+        :param pattern_index: 模版中的元素在分词中的下标
+        :param cut_words: 分词
+        :return:
+        """
+        entity = []
+        property = []
+        keywords = []
+        task_type = None
+
+        if pattern in self.entproN:
+            """实体+属性n"""
+            key_array = pattern.split("-")
+            index = 0
+            for pa in key_array:
+                if pa == 'ent':
+                    entity.append(cut_words[pattern_index[index]])
+                if pa == 'pro' or pa == 'hed&pro':
+                    property.append(cut_words[pattern_index[index]])
+                index = index + 1
+            return entity, property, "","task_normal_pro"
+
+        if pattern in self.entproV:
+            """实体+属性v"""
+
+
+            key_array = pattern.split("-")
+            index = 0
+            for pa in key_array:
+                if pa == 'ent':
+                    entity.append(cut_words[pattern_index[index]])
+                if pa == 'pro' or pa == 'hed&pro':
+                    property.append(cut_words[pattern_index[index]])
+                index = index + 1
+
+            return entity, property, "","task_normal_pro"
+
+        if pattern in self.entrelN:
+            """实体+关系n"""
+            key_array = pattern.split("-")
+            index = 0
+            for pa in key_array:
+                if pa == 'ent':
+                    entity.append(cut_words[pattern_index[index]])
+                if pa == 'rel' or pa == 'hed&rel':
+                    property.append(cut_words[pattern_index[index]])
+                index = index + 1
+
+            return entity, property, "","task_normal_rel"
+
+        if pattern in self.entrelNN:
+            """实体+关系n"""
+            key_array = pattern.split("-")
+            index = 0
+            for pa in key_array:
+                if pa == 'rel' or pa == 'hed&rel':
+                    property.append(cut_words[pattern_index[index]])
+                    entity.append(cut_words[pattern_index[index - 1]])
+                index = index + 1
+            return entity, property, "","task_normal_rel"
+
+        if pattern in self.entrelV:
+            """实体+关系v"""
+
+            key_array = pattern.split("-")
+            index = 0
+            for pa in key_array:
+                if pa == 'ent':
+                    entity.append(cut_words[pattern_index[index]])
+                if pa == 'rel' or pa == 'hed&rel':
+                    property.append(cut_words[pattern_index[index]])
+                index = index + 1
+            return entity, property, "","task_normal_rel"
+
+        if pattern in self.entrelVV:
+            """实体+关系v"""
+
+            key_array = pattern.split("-")
+            index = 0
+            for pa in key_array:
+                if pa == 'rel' or pa == 'hed&rel':
+                    property.append(cut_words[pattern_index[index]])
+                    entity.append(cut_words[pattern_index[index - 1]])
+                index = index + 1
+            return entity, property, "","task_normal_rel"
+
+        if pattern in self.relEtypeV:
+            """关系(名词性)+关系值(实体)+实体类型"""
+
+            pattern_array = pattern.split("-")
+            index = 0
+            if 'rel' in pattern_array:
+                rel_index = pattern_array.index('rel')
+            elif 'hed&rel' in pattern_array:
+                rel_index = pattern_array.index('hed&rel')
+            property.append(cut_words[pattern_index[rel_index]])
+            keywords.append(cut_words[pattern_index[rel_index + 1]])
+            for pa in pattern_array:
+                if pa == 'ent' :
+                    if index == rel_index + 1:
+                        index = index + 1
+                        continue
+                    entity.append(cut_words[pattern_index[index]])
+                index = index + 1
+
+            return entity, property, keywords,"task_son_kw_match"
+
+        if  pattern  =='ent-V-R-ent-rel':
+            """关系(动词性)+关系值(实体)+实体类型"""
+            keywords.append(cut_words[pattern_index[0]])
+            entity.append(cut_words[pattern_index[3]])
+            property.append(cut_words[pattern_index[4]])
+            return entity, property, keywords,"task_son_kw_match"
+        if  pattern == 'R-ent-rel-V-ent':
+            keywords.append(cut_words[pattern_index[4]])
+            entity.append(cut_words[pattern_index[1]])
+            property.append(cut_words[pattern_index[2]])
+            return entity, property, keywords,"task_son_kw_match"
+        if  pattern == 'rel-V-ent-R-ent':
+            keywords.append(cut_words[pattern_index[2]])
+            entity.append(cut_words[pattern_index[4]])
+            property.append(cut_words[pattern_index[0]])
+            return entity, property, keywords,"task_son_kw_match"
+
+        if pattern in self.entSubent:
+            keywords.append(cut_words[pattern_index[0]])
+            entity.append(cut_words[pattern_index[3]])
+            return entity, property, keywords,"task_limit_sub"
+
+        """
+        属性名 + 属性值 + 实体类型 -->实体
+        闽是哪个省的简称
+        哪个省的简称是闽
+        发源地在云南省乌蒙山东南侧的河流是哪个
+
+        向下找子类，得到相关属性 / 关系的属性关系值，匹配属性 / 关系的值，找到对应的实体
+
+        self.pronvEtype = ['#V-R-ent-pro',
+                           'R-ent-pro-V#',
+                           'pro#ent-V-R']
+        """
+        if 'pro' in pattern and 'V' in pattern:
+            pattern_array = pattern.split("-")
+            v_index = pattern.index('V')
+            v_word_index = pattern_array.index('V')
+            front = pattern[:v_index + 1]
+            print("front", front)
+            back = pattern[v_index:]
+            print("front", back)
+
+            if front == 'R-ent-pro-V':
+                print('v_word_index', pattern_index[v_word_index])
+                match_one = "".join(cut_words[:pattern_index[v_word_index]])
+                print("match_one", match_one)
+                entity.append(cut_words[pattern_index[1]])
+                property.append(cut_words[pattern_index[2]])
+                return entity, property, [match_one], 'task_son_match'
+
+
+            elif back == 'V-R-ent-pro':
+
+                print('v_word_index', pattern_index[v_word_index])
+                match_one = "".join(cut_words[:pattern_index[v_word_index]])
+                print("match_one", match_one)
+                entity.append(cut_words[pattern_index[-2]])
+                property.append(cut_words[pattern_index[-1]])
+                return entity, property, [match_one], 'task_son_match'
+
+            elif pattern_array[0] == 'pro' and pattern_array[-1] == 'R' and pattern_array[-2] == 'V' and pattern_array[
+                -3] == 'ent':
+                entity.append(cut_words[pattern_index[-3]])
+                property.append(cut_words[pattern_index[0]])
+
+                match_one = "".join(cut_words[pattern_index[0]+1:pattern_index[-3]])
+                print("match_one",match_one,pattern_index[1],pattern_index[-3])
+
+                return entity,property,[match_one],'task_son_match'
+
         return None,None,None,None
 
 if __name__ == '__main__':

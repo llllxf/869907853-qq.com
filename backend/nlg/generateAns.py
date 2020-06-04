@@ -19,27 +19,24 @@ class generateAns(object):
 
     def getAns(self,entity,task_type,ans_array):
         if ans_array == None:
-            return ""
+
             if entity == None:
                 ans = "对不起，暂时无法回答该方面的问题。\n"
                 return ans
             ans = "对不起，暂时无法回答"+entity+"该方面的问题。\n"
-            #print("========================================================")
-            #print(ans)
-
-        if task_type == 'task_son_kw':
-
-            ans = "".join(ans_array[0])
-            #print("========================================================")
-            #print(ans)
             return ans
-        if task_type == 'task_son' or task_type == 'task_singal_entity':
+            #print("========================================================")
+            #print(ans)
+
+        if task_type == 'ans_list':
+
+            ans = ",".join(ans_array)
+            return ans
+        if task_type == 'ans_triple':
             ans = ""
             ans = ans + ans_array[0]+"的"+ans_array[1]+": "+ans_array[2]+"\n"
-            #print("========================================================")
-            #print(ans)
             return ans
-        if task_type == 'task_normal':
+        if task_type == 'ans_items':
             ans = ""
             for name, value in ans_array.items():
                 for pro, provalue in value.items():

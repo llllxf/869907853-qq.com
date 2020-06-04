@@ -15,8 +15,6 @@ import requests, json
 
 class matchWords(object):
     """
-
-
     """
 
     def __init__(self):
@@ -36,6 +34,8 @@ class matchWords(object):
         self.instanceArray = list(set(read_file(project_path + "/data/allentity.csv")))
         self.instanceArray = sorted(self.instanceArray, key=lambda i: len(i), reverse=True)
 
+        self.typeArray = list(set(read_file(project_path + "/data/etype.csv")))
+        self.typeArray = sorted(self.typeArray, key=lambda i: len(i), reverse=True)
 
         proArray = read_file(project_path + "/data/cleanpro.csv")
         self.standardPro = sorted(proArray, key=lambda i: len(i), reverse=True)
@@ -83,15 +83,13 @@ class matchWords(object):
         return "task_normal",None,None
 
     def formAsking(self,words):
-        print("为什么有两次啊",words)
+
         words_type, ask_ent, ask_words = self.classify(words)
 
         if words_type == 'task_normal':
             ask_words = words
         elif words_type == 'task_whether':
-            print("ask_ent",ask_ent)
             father_list = self.graph_util.getFatherByType(ask_ent)
-            print("father_list",father_list)
             father_list = sorted(father_list, key=lambda i: len(i), reverse=True)
             exist = False
             for father in father_list:
@@ -165,21 +163,25 @@ class matchWords(object):
                     coo.append(cut_words[c_index])
                     coo_index.append(c_index)
                     continue
-
-                words_mark[c_index]=1
+                if cw in self.typeArray:
+                    words_mark[c_index]=6
+                else:
+                    words_mark[c_index]=1
                 ins_index[cw]=c_index
                 find_entity.append(cw)
 
             if cw in self.standardPro:
                 if self.judgeSub(cw,find_pro):
                     continue
-                if words_mark[c_index]==1:
+                if words_mark[c_index] ==1 :
                     words_mark[c_index]=3
                     find_pro.append(cw)
                     pro_index[cw]=c_index
-                elif words_mark[c_index]>0:
-                    continue
-                else:
+                elif words_mark[c_index]==6:
+                    words_mark[c_index]=7
+                    find_pro.append(cw)
+                    pro_index[cw] = c_index
+                elif words_mark[c_index]==0:
                     words_mark[c_index]=2
                     find_pro.append(cw)
                     pro_index[cw] = c_index
@@ -208,47 +210,79 @@ class matchWords(object):
         """
         形成模版
         """
-        pattern = ""
+        print("word_mark",words_mark)
+        pattern_normal = ""
+        pattern_pro = ""
+        pattern_type = ""
         index = 0
 
         for wm in words_mark:
 
             if wm == 0:
                 if postags[index] == 'r':
-                    pattern += 'R'
-                    pattern += "-"
+                    pattern_normal += 'R-'
+                    pattern_pro += 'R-'
+                    pattern_type += 'R-'
+
+
                 elif index == hed_index and (postags[hed_index]=='v' or postags[hed_index]=='p'):
-                    pattern += "V"
-                    pattern += "-"
+                    pattern_normal += 'V-'
+                    pattern_pro += 'V-'
+                    pattern_type += 'V-'
+
                 else:
-                    pattern += cut_words[index]
-                    pattern += "-"
+                    pattern_normal += cut_words[index]
+                    pattern_pro += cut_words[index]
+                    pattern_type += cut_words[index]
+                    pattern_normal += '-'
+                    pattern_pro += '-'
+                    pattern_type += '-'
             if wm == 1:
-                pattern += "ent"
-                pattern += "-"
+                pattern_normal += 'ent-'
+                pattern_pro += 'ent-'
+                pattern_type += 'ent-'
             if wm == 2:
                 if index == hed_index:
-                    pattern += "hed&pro"
+                    pattern_normal += 'hed&pro-'
+                    pattern_pro += 'hed&pro-'
+                    pattern_type += 'hed&pro-'
                 else:
-                    pattern += "pro"
-                pattern += "-"
+                    pattern_normal += 'pro-'
+                    pattern_pro += 'pro-'
+                    pattern_type += 'pro-'
             if wm == 3:
-                pattern += "ent&pro"
-
-                pattern += "-"
+                pattern_normal += 'ent-'
+                pattern_pro += 'pro-'
+                pattern_type += 'ent-'
+            """
             if wm == 4:
                 pattern += "com"
                 pattern += "-"
+            """
             if wm == 5:
                 if index == hed_index:
-                    pattern += "hed&rel"
+                    pattern_normal += 'hed&rel-'
+                    pattern_pro += 'hed&rel-'
+                    pattern_type += 'hed&rel-'
                 else:
-                    pattern += "rel"
-                pattern += "-"
+                    pattern_normal += 'rel-'
+                    pattern_pro += 'rel-'
+                    pattern_type += 'rel-'
+            if wm == 6:
+                pattern_normal += 'ent-'
+                pattern_pro += 'ent-'
+                pattern_type += 'type-'
+            if wm == 7:
+                pattern_normal += 'ent-'
+                pattern_pro += 'pro-'
+                pattern_type += 'type-'
             index = index+1
-        if pattern[-1] == '-':
-            pattern = pattern[:-1]
-
+        if pattern_normal[-1] == '-':
+            pattern_normal = pattern_normal[:-1]
+        if pattern_pro[-1] == '-':
+            pattern_pro = pattern_pro[:-1]
+        if pattern_type[-1] == '-':
+            pattern_type = pattern_type[:-1]
 
         """
         加入有实体和属性重名的情况，那么依据该ent&pro的依存句法树来确定该词汇是实体还是属性
@@ -284,22 +318,38 @@ class matchWords(object):
                                 break
                 index=index+1
         """
+        form_pattern = []
+
+
+        sub_pattern, sub_index = self.formPattern(pattern_type)
+        form_pattern.append(sub_pattern)
+        pattern_index = sub_index
+
+        sub_pattern, sub_index = self.formPattern(pattern_normal)
+        form_pattern.append(sub_pattern)
+
+
+        sub_pattern,sub_index = self.formPattern(pattern_pro)
+        form_pattern.append(sub_pattern)
+
+        return form_pattern,pattern_index,coo,coo_index
+
+    def formPattern(self,pattern):
         form_pattern = ""
         pattern_index = []
         index = 0
         for p in pattern.split("-"):
 
-            if p in ['R','ent','hed&pro','hed&rel','rel','pro','ent&pro','V']:
-                form_pattern+=p
+            if p in ['R', 'ent', 'hed&pro', 'hed&rel', 'rel', 'pro','V','type']:
+                form_pattern += p
                 pattern_index.append(index)
-                form_pattern+='-'
-            index = index+1
+                form_pattern += '-'
+            index = index + 1
 
         if form_pattern[-1] == '-':
             form_pattern = form_pattern[:-1]
 
-
-        return form_pattern,pattern_index,coo,coo_index
+        return form_pattern, pattern_index
 
 
     def positionControl(self, entity_deal):

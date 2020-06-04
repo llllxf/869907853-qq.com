@@ -15,16 +15,17 @@ sys.path.append(project_path)
 from data.data_process import read_file
 
 def getProEnt():
-    ent = read_file(project_path+"/data/allentity.csv")
-    pro = read_file(project_path + "/data/cleanpro.csv")
+    entpro = read_file(project_path+"/entpro.txt")
+    enttype = read_file(project_path + "/data/etype.csv")
 
-    for e in ent:
-        if e in pro:
-            print(e)
+    inf = open("in.txt","w")
+    outf = open("out.txt","w")
+    for sub in enttype:
+        if sub in entpro:
+            inf.writelines(sub+"\n")
+        else:
+            outf.writelines(sub+"\n")
 
-    print('湖泊')
-    print('国家')
-    print('海拔')
 
 if __name__ == '__main__':
     getProEnt()
