@@ -99,7 +99,7 @@ class PatternMatch(object):
         撒哈拉以南非洲有哪些湖泊
         
         """
-        self.entSubent = ['ent-V-R-type','ent-type-V-R','R-type-V-ent']
+        #self.entSubent = ['ent-V-R-type','ent-type-V-R','R-type-V-ent']
 
 
     def matchSingalEntity(self,pattern,pattern_index,cut_words):
@@ -157,8 +157,6 @@ class PatternMatch(object):
 
         if pattern in self.entproV:
             """实体+属性v"""
-
-
             key_array = pattern.split("-")
             index = 0
             for pa in key_array:
@@ -232,7 +230,7 @@ class PatternMatch(object):
             index = 0
 
             for pa in pattern_array:
-                if pa == 'ent' :
+                if pa == 'ent':
                     keywords.append(cut_words[pattern_index[index]])
                 if pa == 'rel' or pa == 'hed&rel':
                     property.append(cut_words[pattern_index[index]])
@@ -243,7 +241,7 @@ class PatternMatch(object):
             return entity, property, keywords,"task_son_kw_match"
 
 
-
+        """
         if pattern in self.entSubent:
             pattern_array = pattern.split("-")
             index = 0
@@ -254,6 +252,7 @@ class PatternMatch(object):
                     keywords.append(cut_words[pattern_index[index]])
                 index = index+1
             return entity, property, keywords,"task_limit_sub"
+        """
 
         """
         属性名 + 属性值 + 实体类型 -->实体
@@ -275,17 +274,13 @@ class PatternMatch(object):
             front = pattern[:v_index + 1]
             back = pattern[v_index:]
 
+            if front == 'R-type-pro-V':
 
-            if front == 'R-type-pro':
-                #print('v_word_index', pattern_index[v_word_index])
-                match_one = "".join(cut_words[:pattern_index[v_word_index]])
-                #print("match_one", match_one)
+                match_one = "".join(cut_words[pattern_index[v_word_index]:])
                 entity.append(cut_words[pattern_index[1]])
                 property.append(cut_words[pattern_index[2]])
 
                 return entity, property, match_one, 'task_son_match'
-
-
 
             elif back == 'V-R-type-pro':
 

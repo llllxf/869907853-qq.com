@@ -965,14 +965,8 @@ class matchWordsByPattern(object):
 
 if __name__ == '__main__':
     a = matchWordsByPattern()
-    #ans = a.dealWithAsking("中国最大的淡水湖是鄱阳湖吗")
-    #print(ans)
-
     while (1):
         s = input()
-        #print(list(jieba.cut(s)))
-        #jieba.load_userdict(project_path + '/data/allentity.csv')
-        #print(list(jieba.cut(s)))
         ans = a.dealWithAsking(s)
         print(ans)
     

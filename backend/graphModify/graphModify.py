@@ -78,7 +78,8 @@ class graphModify(object):
 
         modify_list = []
         new_list = []
-        old_list = read_file(project_path + "/data/pro/"+type+"/"+old+".txt")
+        #old_list = read_file(project_path + "/data/pro/"+type+"/"+old+".txt")
+        old_list = read_file(project_path + "/data/operate/add.txt")
 
         modify_pre = old_list[0]
         predicate = self.search_util.getPredicate(modify_pre)
@@ -99,6 +100,42 @@ class graphModify(object):
 
         log.writelines("reset:  [" + type + "]" + modify_pre + "-->" + new + "\n")
         log.writelines("=========================================\n")
+
+    def resetTripleByDeleteOld(self,filename,type):
+        """
+        将之前的三元组针对主语和谓词删除（也就是该实体的该属性全部删除），然后添加新的三元组
+        :param type:
+        :param old:
+        :param new:
+        :return:
+        """
+
+        reset_list = read_file(project_path + "/data/operate/add.txt")
+
+        sub_list = []
+        pre_list = []
+        obj_list = []
+        for r in reset_list:
+
+            triple = r.split(" ")
+            sub = triple[0]
+            pre = triple[1]
+            obj = triple[2]
+
+
+            self.search_util.deleteTripleBySAP(sub,pre)
+            sub_list.append(sub)
+            pre_list.append(pre)
+
+            obj_list.append(obj)
+
+
+        self.addTripleToRepertory(sub_list,pre_list,obj_list,type)
+
+        log = open(project_path + "/data/log/" + type + ".txt", "a")
+
+        log.writelines("add by delete olds: \n")
+
 
     def resetNewProToRepertory(self,old, new, new_py,type):
         """
@@ -191,7 +228,7 @@ class graphModify(object):
         log.writelines("reset: "+ label + "-->" + new_label + "\n")
         log.writelines("=========================================\n")
 
-    def resetProForFile(self,pro_old):
+    def resetProForPro(self,pro_old):
         """
         读取文件，根据文件中的三元组批量修改（修改三元组中的谓词，与resetProToRepertory不同在于此函数针对属性查询出所有三元组，而后者只差出该属性某一确定类型）
         :param pro_old:
@@ -204,6 +241,25 @@ class graphModify(object):
             subj=data[0]
             obje=data[1]
             pro_new = data[2]
+            self.resetProForTriple(subj,obje,pro_old,pro_new)
+
+            log.writelines("reset: [" +subj  + ":"+pro_old+"]-->" + pro_new + "\n")
+            log.writelines("=========================================\n")
+
+    def resetProForFile(self,fname):
+        """
+        读取文件，根据文件中的三元组批量修改（修改三元组中的谓词，与resetProToRepertory不同在于此函数针对属性查询出所有三元组，而后者只差出该属性某一确定类型）
+        :param pro_old:
+        :return:
+        """
+        log = open(project_path + "/data/log/reset.txt", "a")
+        triple_array = read_file(project_path+"/data/prosearch/"+fname+".txt")
+        for line in triple_array:
+            data = line.split(" ")
+            subj=data[0]
+            obje=data[1]
+            pro_old = data[2]
+            pro_new = data[3]
             self.resetProForTriple(subj,obje,pro_old,pro_new)
 
             log.writelines("reset: [" +subj  + ":"+pro_old+"]-->" + pro_new + "\n")
@@ -257,9 +313,12 @@ class graphModify(object):
         :return:
         """
         log = open(project_path + "/data/log/" + type + ".txt","a")
+
         tripleList = []
         for p_index in range(len(pred)):
             predicate = self.search_util.getPredicate(pred[p_index])
+
+
             subject = self.search_util.getSubject(subj[p_index])
             tripleList.append({"subject":subject,"predicate":predicate,"object":obje[p_index]})
         self.search_util.addTripleToRepertory(tripleList)
@@ -282,6 +341,7 @@ class graphModify(object):
             predicate = self.search_util.getRelPredicate(pred[p_index])
             subject = self.search_util.getSubject(subj[p_index])
             obj = self.search_util.getSubject(obje[p_index])
+            print(obj,"???",obje[p_index])
             tripleList.append({"subject":subject,"predicate":predicate,"object":obj})
         self.search_util.addRelTripleToRepertory(tripleList)
         for i in range(len(subj)):
@@ -297,6 +357,7 @@ class graphModify(object):
         :param type:
         :return:
         """
+        print(subj, pred, obje, type)
         log = open(project_path + "/data/log/" + type + ".txt", "a")
         tripleList = []
         for p_index in range(len(pred)):
@@ -307,6 +368,7 @@ class graphModify(object):
         for i in range(len(subj)):
             log.writelines("delete:  " + subj[i] + "-" + pred[i] + "-" + obje[i] + "\n")
             log.writelines("=========================================\n")
+
     def deleteRelToRepertory(self, subj, pred, obje, type):
         """
         删除一条三元组（关系）
@@ -329,69 +391,61 @@ class graphModify(object):
             log.writelines("delete:  " + subj[i] + "-" + pred[i] + "-" + obje[i] + "\n")
             log.writelines("=========================================\n")
 
-    def getInfForComplete(self,type):
-        #entity_list = self.search_util.getEntityByType(type)
-        entity_list = read_file(project_path+"/data/hl1.txt")
-        f = open(project_path + "/data2/inf/" + type + ".csv", "w")
-        for ent in entity_list:
-            inf_dict = self.search_util.completionGraph(ent,type)
-            f.writelines(ent + "\n")
-            f.writelines("-----------------------------------------\n")
-            if inf_dict is None:
-                continue
-            for key, value in inf_dict.items():
-                f.writelines(key + ": " + value + "\n")
-            f.writelines("=========================================\n")
-
-
-    def completeGraph(self,type):
-        """
-        针对某一类实体得到信息，整合后填充
-        :param type:
-        :return:
-        """
-        self.getInfForComplete(type)
-
-
-
-
 
 if __name__ == '__main__':
     g = graphModify()
-    rel_add = read_file(project_path + "/data/operate/addrel.txt")
-    pro_add = read_file(project_path + "/data/operate/add.txt")
+    #rel_add = read_file(project_path + "/data/operate/add.txt")
+    rel_add = read_file(project_path + "/data3/complete/海洋_rel.csv")
+    #pro_add = read_file(project_path + "/data3/complete/城市_pro.csv")
     rel_delete = read_file(project_path + "/data/operate/deleterel.txt")
     pro_delete = read_file(project_path + "/data/operate/delete.txt")
 
-    g.getInfForComplete('河流')
 
-    #g.resetProForFile('气候特征')
+    #g.getInfForComplete('河流')
+
+    #g.resetProForFile('河流pro')
     #g.search_util.addProperty("气候特征",'qihoutezheng')
 
-    #g.resetProToNewOne('气候特征','气候')
+    #g.resetProToNewOne('养殖对象','养殖物种')
 
     #rel_reset = read_file(project_path + "data/operate/relreset.txt")
     #pro_reset = read_file(project_path + "data/operate/reset.txt")
+
     """
     for r in rel_add:
         triples = r.split(" ")
         print(triples)
-        g.addRelTripleToRepertory([triples[0]],[triples[1]],[triples[2]],"国家")
+        g.addRelTripleToRepertory([triples[0]],[triples[1]],[triples[2]],"海洋")
     """
+
+
+
+
+    g.resetTripleByDeleteOld('add', '河流')
+
     """
     for p in pro_add:
         triples = p.split(" ")
         print(triples)
-        g.addTripleToRepertory([triples[0]], [triples[1]], [triples[2]], "气候")
+        g.addTripleToRepertory([triples[0]], [triples[1]], [triples[2]], "城市")
     """
+
+
 
 
     """
     for p in pro_delete:
-        triples = p.split(",")
+        triples = p.split(" ")
         print(triples)
-        g.deleteTripleToRepertory([triples[0]],[triples[1]],[triples[2]],"气候特征")
+        g.deleteTripleToRepertory([triples[0]],[triples[1]],[triples[2]],"海洋")
     """
+
+
+
+
+
+    #g.resetTripleByDeleteOld('2','地位')
+
 
 
 

@@ -9,7 +9,8 @@ sys.path.append(project_path)
 from data.data_process import read_file
 from nlu.LTPUtil import LTPUtil
 from graphSearch.graphSearch import graphSearch
-
+from dealNLU.compareNLU import compareNLU
+from dealNLU.calculateNLU import calculateNLU
 
 import requests, json
 
@@ -27,6 +28,8 @@ class matchWords(object):
 
         """
         self.ltp_util = LTPUtil()
+        self.compare_util = compareNLU()
+        self.calculate_util = calculateNLU()
         self.graph_util = graphSearch()
 
         self.syntaxMatch = {'task_whether': [['是不是'], ['是', '吗'], ['有没有'], ['有', '吗'], ['是否'], ['是否是'],['会','吗']]}
@@ -69,6 +72,53 @@ class matchWords(object):
         return list(jieba.cut(words))
 
     def classify(self,words):
+        """
+        得到句子的类型，不同类型的句子进行初步整理
+        :param words:
+        :return:
+        对于是否问题，第一个返回值是问句类型，第二个返回值是问句本体，第三个值是问的实体
+        对于比较问题，第一个返回值是问句类型，第二个值是模版匹配结果，第三个返回值是抽取的句子信息
+            比较问题中如果返回的是反问句，那么匹配结果就是实际操作对象，也就是作用是正常比较问句的抽取信息，第三个值是反问标识
+        """
+
+
+
+        compare_type,compare_inf,match_result = self.compare_util.checkCompare(words)
+
+        if compare_type is not None:
+            if compare_inf == 'task_compare_ask':
+                return compare_type,match_result,compare_inf
+            print("任务类型: ",compare_type)
+            print("问题类型: ", match_result)
+            print("比较实体: ",compare_inf)
+            print("===========================================")
+
+            return compare_type,match_result,compare_inf
+
+        calculate_type,calculate_inf,match_result = self.calculate_util.checkCalculateMost(words)
+        if calculate_type is not None:
+            if calculate_inf == 'task_calculate_ask':
+                return calculate_type,match_result,calculate_inf
+            print("任务类型: ",calculate_type)
+            print("问题类型: ", match_result)
+            print("最值对象: ",calculate_inf['ask'])
+            print("最值属性: ",calculate_inf['predicate'])
+            print("最值倾向: ",calculate_inf['predicate_adj'])
+            print("===========================================")
+
+            return calculate_type,match_result,calculate_inf
+
+        calculate_type, calculate_inf, match_result = self.calculate_util.checkCalculateDist(words)
+        if calculate_type is not None:
+            if calculate_inf == 'task_calculate_ask':
+                return calculate_type, match_result, calculate_inf
+            print("任务类型: ", compare_type)
+            print("问题类型: ", match_result)
+            print("询问对象: ", calculate_inf)
+            print("===========================================")
+
+            return calculate_type, match_result, calculate_inf
+
         for pattern in self.syntaxMatch['task_whether']:
             count = 0
             for word in pattern:
@@ -78,28 +128,32 @@ class matchWords(object):
                 if count == len(pattern):
                     pattern_array = words.split(pattern[0])
                     if len(pattern)>1:
-                        return "task_whether",pattern_array[0],pattern_array[1][:-1]
-                    return "task_whether",pattern_array[0],pattern_array[1]
+                        return "task_whether",pattern_array[1][:-1],pattern_array[0],
+                    return "task_whether",pattern_array[1],pattern_array[0]
         return "task_normal",None,None
 
-    def formAsking(self,words):
-
+    def formAsking(self,ask_words,ask_ent):
+        """
         words_type, ask_ent, ask_words = self.classify(words)
 
-        if words_type == 'task_normal':
+        if words_type == 'task_compare':
+            return ask_words,ask_ent,words_type
+        elif words_type == 'task_normal':
             ask_words = words
         elif words_type == 'task_whether':
-            father_list = self.graph_util.getFatherByType(ask_ent)
-            father_list = sorted(father_list, key=lambda i: len(i), reverse=True)
-            exist = False
-            for father in father_list:
-                if father in ask_words:
-                    exist = True
-                    break
-            if exist == False:
-                ask_words = ask_words + "的" + father_list[0] + "是什么"
+        """
+        father_list = self.graph_util.getFatherByType(ask_ent)
+        father_list = sorted(father_list, key=lambda i: len(i), reverse=True)
+        #print(father_list)
+        exist = False
+        for father in father_list:
+            if father in ask_words:
+                exist = True
+                break
+        if exist == False:
+            ask_words = ask_words + "的" + father_list[0] + "是什么"
         ask_words = self.checkR(ask_words)
-        return ask_words, ask_ent,words_type
+        return ask_words
 
 
 
@@ -129,9 +183,6 @@ class matchWords(object):
             return cutwords
 
         return cutwords
-
-
-
 
 
     def wordBywordAndCheck(self, cut_words,arcs_dict,reverse_arcs_dict,postags,hed_index):
@@ -210,7 +261,7 @@ class matchWords(object):
         """
         形成模版
         """
-        print("word_mark",words_mark)
+        #print("word_mark",words_mark)
         pattern_normal = ""
         pattern_pro = ""
         pattern_type = ""
@@ -1264,7 +1315,7 @@ if __name__ == '__main__':
         #jieba.load_userdict(project_path + '/data/allentity.csv')
         #print(list(jieba.cut(s)))
         #ans = a.dealWithAsking(s,False)
-        ans = a.dealWithAsking(s)
+        #ans = a.classify(s)
         #print(ans)
     
 

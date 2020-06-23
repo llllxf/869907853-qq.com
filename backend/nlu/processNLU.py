@@ -16,6 +16,7 @@ sys.path.append(project_path)
 from nlu.matchWords import matchWords
 from nlu.analysisPattern import PatternMatch
 from nlu.formWords import formWords
+
 import numpy as np
 
 class processNLU(object):
@@ -25,16 +26,90 @@ class processNLU(object):
         self.form_util = formWords()
         self.task_sort = ['task_son_kw_match','task_normal_pro','task_normal_rel','task_son_match','task_limit_sub','task_singal_entity']
 
-    def dealWithAsking(self,words):
+
+    def differentWordsType(self,words):
         """
-        1.检查句子有没有疑问代词
-        2.
+        问句有不同的类型，不同的类型有不同的处理方式来达到对问句的理解
+
+        该函数是自然语言理解的总控函数
         :param words:
+        :return: 不同类型的问句统一的抽象形式，即抽取实体、属性/关系
+        """
+        #words_type,ask_words,ask_ent = self.words_util.classify(words)
+        words_type, match_result, words_inf = self.words_util.classify(words)
+        #print(words_type,match_result,words_inf,"???")
+
+        if 'task_calculate' in words_type:
+
+            if words_inf == 'task_calculate_ask':
+                ans_dict = {'words_type':words_type,'ask':match_result,'task_type':words_inf}
+                #print(ans_dict,"ans_dict")
+                return ans_dict
+
+            ans_dict = self.dealWithCalculate(match_result,words_inf)
+
+            return ans_dict
+
+
+        if words_type == 'task_compare':
+
+            ans_dict = {'words_type':words_type,'entity':words_inf['entity'],'property':words_inf['property'],'task_type':match_result}
+
+            return ans_dict
+
+
+        elif words_type == 'task_normal':
+            ask_words = self.words_util.checkR(words)
+            ask_words, entity_array, coo, coo_index, property_array, keywords_array, task_type_array, words_type, ask_ent = self.dealWithAsking(ask_words, None, words_type)
+
+            ans_dict = {'ask_words':ask_words,'entity_array':entity_array,'coo':coo,'coo_index':coo_index,'property_array':property_array,'keywords_array':keywords_array,
+                        'task_type_array':task_type_array,'words_type':words_type,'ask_ent':ask_ent}
+
+
+            return ans_dict
+
+        elif words_type == 'task_whether':
+            ask_words = self.words_util.formAsking(match_result,words_inf)
+            print("调整问题为: ", ask_words)
+            print("询问实体", words_inf)
+
+            ask_words,entity_array, coo, coo_index, property_array, keywords_array, task_type_array, words_type, ask_ent =self.dealWithAsking(ask_words, words_inf, words_type)
+            ans_dict = {'ask_words': ask_words, 'entity_array': entity_array, 'coo': coo, 'coo_index': coo_index,
+                        'property_array': property_array, 'keywords_array': keywords_array,
+                        'task_type_array': task_type_array, 'words_type': words_type, 'ask_ent': ask_ent}
+            return ans_dict
+
+    def dealWithCalculate(self,ask_type,ask_ent):
+        """
+        处理计算类问题
+        1.最值处理 最值的信息提取直接放在了calculate_util里面
+        :param ask_ent:
         :return:
         """
-        ask_words, ask_ent, words_type = self.words_util.formAsking(words)
-        print("调整问题为: ", ask_words)
-        print("询问实体", ask_ent)
+        if 'most' in ask_type:
+
+            ask_ent['task_type']=ask_type
+            ask_ent['words_type'] = 'task_calculate'
+
+            return ask_ent
+        if 'dist' in ask_type:
+            ask_ent['task_type'] = ask_type
+            ask_ent['words_type'] = 'task_calculate'
+
+
+    def dealWithAsking(self,ask_words, ask_ent, words_type):
+        """
+        处理普通类型的问句，通过抽象出实体、属性/关系、疑问代词和谓语来匹配模版，模版的匹配涉及到句法依存、词性分析
+        :param words: 问句
+        :return:处理后的句子信息
+        """
+
+
+        #ask_words, ask_ent, words_type = self.words_util.formAsking(words)
+        #print("调整问题为: ", ask_words)
+        #print("询问实体", ask_ent)
+
+
 
         cut_words = self.words_util.cutWords(ask_words)
         pattern,pattern_index,coo,coo_index,arcs_dict,reverse_arcs_dict,postags,hed_index = self.words_util.getWordsPattern(cut_words)
@@ -87,9 +162,7 @@ class processNLU(object):
         keywords_array = np.array(keywords_array_temp)[sort_index]
         task_type_array = np.array(task_type_array_temp)[sort_index]
 
-        return ask_words,cut_words,entity_array,coo,coo_index,property_array,keywords_array,task_type_array,words_type,ask_ent,pattern
-
-
+        return ask_words,entity_array,coo,coo_index,property_array,keywords_array,task_type_array,words_type,ask_ent
 
 if __name__ == '__main__':
     a = processNLU()

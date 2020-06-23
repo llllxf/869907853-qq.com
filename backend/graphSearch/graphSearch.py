@@ -13,10 +13,7 @@ project_path = os.path.abspath(os.path.join(os.getcwd(), ".."))
 sys.path.append(project_path)
 
 
-
-from nlu.formWords import formWords
-
-import requests,json
+import requests
 import numpy as np
 
 
@@ -24,7 +21,9 @@ import numpy as np
 class graphSearch(object):
 
     def __init__(self):
-        self.form_util = formWords()
+        pass
+
+
 
     def getRelByType(self,type):
         """
@@ -44,7 +43,7 @@ class graphSearch(object):
         :param type:
         :return:
         """
-        uri = "http://10.10.1.202:8004/getProByType?repertoryName=geo_all&type="+type
+        uri = "http://10.10.1.202:8004/getProByType?repertoryName=geo4&type="+type
         r = requests.post(uri)
         pro_list = list(r.json())
 
@@ -56,7 +55,7 @@ class graphSearch(object):
         :param label:
         :return:
         """
-        print("label",label)
+
         uri = "http://10.10.1.202:8004/getProPredicate?repertoryName=geo4&label="+label
         r = requests.post(uri)
         ans = list(r.json())
@@ -77,17 +76,19 @@ class graphSearch(object):
 
         return predicate
 
-    def getSubject(self,label):
+    def getSubject(self, label):
         """
         通过标签得到原始主语/宾语
         :param label:
         :return:
         """
-        uri = "http://10.10.1.202:8004/getSubject?repertoryName=geo4&label="+label
-        #print("label",label)
+        uri = "http://10.10.1.202:8004/getSubject?repertoryName=geo4&label=" + label
+        # print("label",label)
         r = requests.post(uri)
-        subject = list(r.json())[0]
-        return subject
+        subject = list(r.json())
+        if subject is not None and len(subject) > 0:
+            return subject[0]
+        return None
 
     def getValueByPro(self,type,property):
         """
@@ -141,6 +142,7 @@ class graphSearch(object):
         :param obje:
         :return:
         """
+
         data = {'repertoryName': 'geo4', 'tripleList': str(tripleList)}
         uri = "http://10.10.1.202:8004/addTripleToRepertory?"
         ret = requests.post(uri, data=data)
@@ -167,6 +169,7 @@ class graphSearch(object):
         :param obje:
         :return:
         """
+
         data = {'repertoryName': 'geo4', 'tripleList': str(tripleList)}
         uri = "http://10.10.1.202:8004/deleteTripleToRepertory?"
         ret = requests.post(uri, data=data)
@@ -217,22 +220,29 @@ class graphSearch(object):
         ret = requests.post(uri, data=data)
         print(ret)
 
+    def deleteTripleBySAP(self,subject,predicate):
+
+        data = {'repertoryName': 'geo4', 'subject': subject, 'predicate': predicate}
+        uri = "http://10.10.1.202:8004/deleteTripleBySAP?"
+        ret = requests.post(uri, data=data)
+        print(ret)
+
+
 
     #======================================self modify=========================================
-    def completionGraph(self,ent,type):
+    def completionGraph(self, ent, type):
 
-        print(ent,type)
         uri = "https://api.ownthink.com/kg/knowledge?entity=" + ent
         r = requests.post(uri)
 
         if r.json()['message'] == 'success':
-
+            print(r.json())
             ans_dict = dict(r.json()['data'])
-            if 'tag' in ans_dict.keys():
-                if type in list(r.json()['data']['tag']):
-                    inf_dict = dict(r.json()['data']['avp'])
+            # print(ans_dict)
+            if 'avp' in ans_dict.keys():
+                inf_dict = dict(r.json()['data']['avp'])
 
-                    return inf_dict
+                return inf_dict
         return None
 
     # ======================================pedia modify=========================================
@@ -249,13 +259,13 @@ class graphSearch(object):
         :return:
         """
 
-        uri = "http://10.10.1.202:8004/fuzzySearch?repertoryName=geo&words=" + words
+        uri = "http://10.10.1.202:8004/fuzzySearch?repertoryName=geo4&words=" + words
         r = requests.post(uri)
         ent_list = list(r.json())
 
         return ent_list
 
-    def searchByEntity(self, entity):
+    def searchEntity(self, entity):
         """
         根据标签分别查找该标签对应的属性和关系信息(同名实体一起)
 
@@ -279,7 +289,7 @@ class graphSearch(object):
         根据标签分别查找该标签对应的属性和关系信息(同名实体一起)
 
         :param entity: 实体标签
-        :return: 属性列表，关系列表
+        :return: 属性/关系名称列表
         """
 
         """获取属性信息"""
@@ -298,21 +308,16 @@ class graphSearch(object):
         ans = {}
         if len(entity) > 0:
             for e in entity:
-                pro_list, rel_list = self.searchByEntity(e)
+                pro_list, rel_list = self.searchEntity(e)
                 ans[e] = {'p': pro_list, 'r': rel_list}
                 print("抽取的实体: ", e,ans[e])
         if ans == {}:
             return None
         else:
             return ans
-
+    """
     def dealWithEnitityPro(self, entity):
-        """
-        根据实体list查找图谱中该标签的实体的信息(同名实体一起)
-        :param find_entity: 抽取的实体
-        :return: 返回实体具体信息（属性和关系）或 None
-
-        """
+        #得到实体的属性列表
         ans = {}
         if len(entity) > 0:
             for e in entity:
@@ -322,79 +327,45 @@ class graphSearch(object):
             return None
         else:
             return ans
+    """
 
-    def directAnsByProName(self,entity, property):
+
+    def getNums(self,entity, property):
         """
-        匹配抽出的属性名称和实体具有的属性名称
+        匹配抽出的属性名称和实体具有的属性名称，与上面的函数不同的是返回形式，上面哪个是多个同名属性放在一个字典里，然后又包在实体属性对字典里
 
         :param find_pro: 抽取的属性
         :param find_rel: 抽取的关系
         :param entity_deal: 携带信息的实体
-        :return:
+        :return: 属性值列表，如果不存在设置为N/A，该函数为比较和计算模块服务
         """
         entity_deal = self.dealWithEnitity(entity)
-
-        ans = {}
-
+        ans = []
         for name, content in entity_deal.items():
-            name_dict = {}
-            pro = np.array(content['p'])
+            flag = False
 
+            pro = np.array(content['p'])
 
             for p in pro:
                 if p[0] in property:
+                    flag = True
+                    ans.append(p[1])
+                    break
+            if flag == False:
+                ans.append('N/A')
 
-                    if p[0] in name_dict.keys():
-                        name_dict[p[0]].append(p[1])
-                    else:
-                        name_dict[p[0]] = [p[1]]
-
-            if name_dict != {}:
-                ans[name]=name_dict
-
-        if ans == {}:
+        if len(ans)<1:
             return None
         else:
+
             return ans
 
-    def directAnsByRelName(self,entity, property):
-        """
-        匹配抽出的关系名称和实体具有的关系名称
-
-        :param find_pro: 抽取的属性
-        :param find_rel: 抽取的关系
-        :param entity_deal: 携带信息的实体
-        :return:
-        """
-        entity_deal = self.dealWithEnitity(entity)
-
-
-        ans = {}
-
-        for name, content in entity_deal.items():
-
-            name_dict = {}
-
-            rel = np.array(content['r'])
-            for r in rel:
-                if r[0] in property:
-                    if r[0] in name_dict.keys():
-                        name_dict[r[0]].append(r[1])
-                    else:
-                        name_dict[r[0]] = [r[1]]
-            if name_dict != {}:
-                ans[name]=name_dict
-
-        if ans == {}:
-            return None
-        else:
-            return ans
 
     def getProList(self, entity):
         """
         得到一个实体的属性关系名称
         :param entity: 实体名称
-        :return: 实体的属性/关系名
+        :return: 实体的属性（限制了类型）
         """
 
         uri = "http://10.10.1.202:8004/getPro?repertoryName=geo4&entity=" + entity
@@ -405,6 +376,31 @@ class graphSearch(object):
             return None
 
         return pro_list
+    """
+    def getProByLabel(self,label):
+        
+        uri = "http://10.10.1.202:8004/getProByLabel?repertoryName=geo4&label="+label
+        r = requests.post(uri)
+        pro_list = list(r.json())
+
+        return pro_list
+    """
+
+    def getRelList(self, entity):
+        """
+        得到一个实体的属性关系名称
+        :param entity: 实体名称
+        :return: 实体的关系名
+        """
+
+        uri = "http://10.10.1.202:8004/getRel?repertoryName=geo4&entity=" + entity
+        r = requests.post(uri)
+        rel_list = list(r.json())
+
+        if rel_list == []:
+            return None
+
+        return rel_list
 
     def getEntityByType(self, etype):
         """
@@ -423,7 +419,7 @@ class graphSearch(object):
 
         return son_list
 
-    def getFatherByType(self, entity):
+    def getFather(self, entity):
         """
         得到实体的父类
         :param entity: 实体
@@ -431,7 +427,7 @@ class graphSearch(object):
         """
 
         """获取父类"""
-        uri = "http://10.10.1.202:8004/getFatherByType?repertoryName=geo4&entityName=" + entity
+        uri = "http://10.10.1.202:8004/getFather?repertoryName=geo4&entityName=" + entity
         r = requests.post(uri)
         father_list = list(r.json())
 
@@ -439,188 +435,73 @@ class graphSearch(object):
             return None
         return father_list
 
-    def getEntityByRel(self, entity,property,keyword):
+    def getObjectBySAPLimitType(self,subject,predicate,keytype):
+        """
+        找到某类实体与特定主语和特定谓语有连线的实例
+        :param subject:
+        :param predicate:
+        :param keytype:
+        :return:
+        """
+        uri = "http://10.10.1.202:8004/getObjectBySAPLimitType?repertoryName=geo4&entity=" + subject + "&relation=" + predicate + "&type=" + keytype
+        r = requests.post(uri)
+        obj_list = list(r.json())
+        if obj_list is None:
+            return []
+
+        return obj_list
+
+
+    def getEntityByRelLimitType(self, entity,property,keyword):
         """
         根据关系名和关系值，得到实体，并受限于实体类型
+        找到某类实体与特定宾语和谓词有连线的实例
         :param entity: 实体类系
         :param property: 关系名
         :param keyword: 关系值
         :return: 实体列表
         """
 
-        uri = "http://10.10.1.202:8004/entitySearch?repertoryName=geo4&entity="+entity+"&relation="+property+"&type="+keyword
+        uri = "http://10.10.1.202:8004/getEntityByRelLimitType?repertoryName=geo4&entity="+entity+"&relation="+property+"&type="+keyword
         r = requests.post(uri)
-        son_list = list(r.json())
-        print("son_list",son_list)
+        ent_list = list(r.json())
 
-        if son_list == []:
+        if ent_list == []:
             return None
 
-        return son_list
+        return ent_list
 
-    def downFindAnsByRel(self, entity,property,keyword):
-        ans = self.getEntityByRel(keyword[0],property[0],entity[0])
-        if ans != None:
-            return ans
-        return None
+    """
+    def getEntityByRroValue(self, entity,property,keywords):
+        
+        根据关系名和关系值，得到实体，并受限于实体类型
+        :param entity: 实体类系
+        :param property: 关系名
+        :param keyword: 关系值
+        :return: 实体列表
+        
 
-
-
-    def seacrchAll(self,longWords,shortWords):
-        """
-
-        :param longWords: 问句和属性值中较长的一方
-        :param shortWords: 较短的一方
-        :return: 较短的那方匹配情况
-        """
-        count = 0.
-        for sw in shortWords:
-            if sw in longWords:
-                count = count+1
-        return count
-
-    def directAnsProConWithPro(self, words, deal_entity,property):
-        """
-        根据实体携带的属性信息和问句原文匹配得到与答案相符的属性信息
-        1. 遍历实体所有的属性信息
-        2. 按字符匹配问句和属性信息
-        3. 2得到空则按向量相似度得到匹配信息
-        4. 2,3均空则返回空
-        :param words: 问句
-        :param deal_entity: 实体及其信息
-        :return: 答案或空
-        """
-
-        form_words = self.form_util.preProcessWords(words)
-        ans_con = []
-        count_rate = []
+        uri = "http://10.10.1.202:8004/entitySearch?repertoryName=geo4&entity="+entity+"&relation="+property+"&type="+keyword
+        r = requests.post(uri)
+        ent_list = list(r.json())
 
 
-        for name, content in deal_entity.items():
-            """
-            抽取出的实体的属性
-            """
-            pro = np.array(content['p'])
+        if ent_list == []:
+            return None
 
-            """
-            去掉问题中的实体方便匹配
-            """
-            while (name in form_words):
-                form_words = form_words.replace(name, '')
+        return ent_list
+    """
 
-            for p in pro:
-                if p[0] != property[0]:
-                    continue
-                con = self.form_util.preProcessWords(p[1])
-
-                while (name in con):
-                    con = con.replace(name, '')
-
-                if len(con) > len(form_words):
-                    c_len = len(form_words)
-                    count = self.seacrchAll(con, form_words)
-
-                else:
-
-                    c_len = len(con)
-                    count = self.seacrchAll(form_words, con)
-                if float(count) / float(c_len) >= 0.65:
-                    ans_con.append([name, p[0], p[1]])
-                    count_rate.append(count / c_len)
-        if ans_con != []:
-
-            max_index = np.argmax(np.array(count_rate))
-            return ans_con[max_index]
-        return None
-
-    def directAnsProCon(self, words, deal_entity):
-        """
-        根据实体携带的属性信息和问句原文匹配得到与答案相符的属性信息
-        1. 遍历实体所有的属性信息
-        2. 按字符匹配问句和属性信息
-        3. 2得到空则按向量相似度得到匹配信息
-        4. 2,3均空则返回空
-        :param words: 问句
-        :param deal_entity: 实体及其信息
-        :return: 答案或空
-        """
-
-        form_words = self.form_util.preProcessWords(words)
-
-        ans_con = []
-        count_rate = []
-
-        for name, content in deal_entity.items():
-
-            """
-            抽取出的实体的属性
-            """
-            pro = np.array(content['p'])
-
-            """
-            去掉问题中的实体方便匹配
-            """
-            while (name in form_words):
-                form_words = form_words.replace(name, '')
-
-            for p in pro:
-
-                con = self.form_util.preProcessWords(p[1])
-
-                while (name in con):
-                    con = con.replace(name, '')
-
-                if len(con) > len(form_words):
-                    c_len = len(form_words)
-                    count = self.seacrchAll(con, form_words)
-                else:
-                    c_len = len(con)
-                    count = self.seacrchAll(form_words, con)
-                if float(count) / float(c_len) >= 0.65:
-                    ans_con.append([name, p[0], p[1]])
-                    count_rate.append(count / c_len)
-        if ans_con != []:
-            revers_count = []
-
-            for ans in ans_con:
-                if len(form_words) >= len(ans[2]):
-                    revers_count.append(self.seacrchAll(form_words, ans[2]) / len(form_words))
-                else:
-                    revers_count.append(self.seacrchAll(ans[2], form_words) / len(ans[2]))
-            max_index = np.argmax(np.array(revers_count))
-            return ans_con[max_index]
-        return None
-
-    def matchFuzzySearch(self, words, triple):
-        """
-
-        """
-
-        form_words = self.form_util.preProcessWords(words)
-
-        ans_con = []
-        count_rate = []
-
-        for name,key,value in triple:
-
-            value = self.form_util.preProcessWords(value)
-            while (name in form_words):
-                form_words = form_words.replace(name, '')
-            while (name in value):
-                value = value.replace(name, '')
-            count = self.seacrchAll(value, form_words)
-            c_len = len(form_words)
-            if float(count) / float(c_len) >= 0.65:
-                ans_con.append([name,key,value])
-                count_rate.append(count / c_len)
-
-        if ans_con != []:
-
-            max_index = np.argmax(np.array(count_rate))
-            return ans_con[max_index]
-        return None
 
     def getSubByLimit(self, keyword, entity):
+        """
+
+        没检测到使用
+        得到实体子类中属性值包含keyword的那些子类
+        :param keyword:
+        :param entity:
+        :return:
+        """
 
         sub_entity = []
 
@@ -651,72 +532,6 @@ class graphSearch(object):
 
             return sub_entity
         return None
-
-    def downFindAnsByWords(self,words, entity,property):
-
-        son_list = self.getEntityByType(entity[0])
-        if son_list == None:
-            return None
-        deal_entity = self.dealWithEnitity(son_list)
-        ans = self.directAnsProConWithPro(words,deal_entity,property)
-        return ans
-
-    def downFindAnsByEnt(self,words, entity):
-        deal_entity = self.dealWithEnitity(entity)
-        ans = self.directAnsProCon(words, deal_entity)
-
-        if ans != None:
-            return ans
-        son_list = self.getEntityByType(entity[0])
-        if son_list == None:
-            return None
-        deal_entity = self.dealWithEnitity(son_list)
-        ans = self.directAnsProCon(words,deal_entity)
-        return ans
-
-    def taskNormalPro(self,entity,property):
-        ans = self.directAnsByProName(entity,property)
-        #print("taskNormalpro",ans)
-        return ans
-
-    def taskNormalRel(self,entity,property):
-        ans = self.directAnsByRelName(entity,property)
-        #print("taskNormalrel",ans)
-        return ans
-
-    def taskSonMatch(self,words,entity,property):
-        ans = self.downFindAnsByWords(words,entity,property)
-        #print("taskSonMatch",ans)
-        return ans
-
-    def taskProMatch(self,words,entity,property):
-        ans = self.downFindAnsByWords(words,entity,property)
-        #print("taskSonMatch",ans)
-        return ans
-
-    def taskSonKeyWord(self,entity,property,keyword):
-        ans = self.downFindAnsByRel(entity, property, keyword)
-        #print("taskSonKeyWord",ans)
-        return ans
-
-    def taskProName(self,words,entity):
-        ans = self.downFindAnsByEnt(words,entity)
-        return ans
-
-    def taskReverse(self,words,key_words):
-        triple = self.getEntByfuzzySearch(key_words[0])
-        ans = self.matchFuzzySearch(words,triple)
-        return ans
-
-    def taskLimitSub(self,key_words,entity):
-        ans = self.getSubByLimit(key_words,entity)
-        return ans
-
-
-
-
-
-
 
 if __name__ == '__main__':
     pass

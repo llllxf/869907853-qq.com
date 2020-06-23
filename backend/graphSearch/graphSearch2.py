@@ -44,7 +44,19 @@ class graphSearch(object):
         :param type:
         :return:
         """
-        uri = "http://127.0.0.1:8004/getProByType?repertoryName=geo_all&type="+type
+        uri = "http://127.0.0.1:8004/getProByType?repertoryName=geo4&type="+type
+        r = requests.post(uri)
+        pro_list = list(r.json())
+
+        return pro_list
+
+    def getProByLabel(self,label):
+        """
+        获得某个类型的实体的所有属性
+        :param type:
+        :return:
+        """
+        uri = "http://127.0.0.1:8004/getProByLabel?repertoryName=geo4&label="+label
         r = requests.post(uri)
         pro_list = list(r.json())
 
@@ -56,12 +68,13 @@ class graphSearch(object):
         :param label:
         :return:
         """
-        print("label",label)
+
         uri = "http://127.0.0.1:8004/getProPredicate?repertoryName=geo4&label="+label
         r = requests.post(uri)
         ans = list(r.json())
         if len(ans)>0:
             predicate = list(r.json())[0]
+
             return predicate
         return None
 
@@ -77,17 +90,21 @@ class graphSearch(object):
 
         return predicate
 
-    def getSubject(self,label):
+    def getSubject(self, label):
         """
         通过标签得到原始主语/宾语
         :param label:
         :return:
         """
-        uri = "http://127.0.0.1:8004/getSubject?repertoryName=geo4&label="+label
-        print("label",label)
+        uri = "http://localhost:8004/getSubject?repertoryName=geo4&label=" + label
+        # print("label",label)
         r = requests.post(uri)
-        subject = list(r.json())[0]
-        return subject
+        subject = list(r.json())
+
+        if subject is not None and len(subject) > 0:
+            print(subject)
+            return subject
+        return None
 
     def getValueByPro(self,type,property):
         """
@@ -167,6 +184,7 @@ class graphSearch(object):
         :param obje:
         :return:
         """
+        print(str(tripleList))
         data = {'repertoryName': 'geo4', 'tripleList': str(tripleList)}
         uri = "http://127.0.0.1:8004/deleteTripleToRepertory?"
         ret = requests.post(uri, data=data)
@@ -219,20 +237,19 @@ class graphSearch(object):
 
 
     #======================================self modify=========================================
-    def completionGraph(self,ent,type):
+    def completionGraph(self, ent, type):
 
-        print(ent,type)
         uri = "https://api.ownthink.com/kg/knowledge?entity=" + ent
         r = requests.post(uri)
 
         if r.json()['message'] == 'success':
-
+            print(r.json())
             ans_dict = dict(r.json()['data'])
-            if 'tag' in ans_dict.keys():
-                if type in list(r.json()['data']['tag']):
-                    inf_dict = dict(r.json()['data']['avp'])
+            # print(ans_dict)
+            if 'avp' in ans_dict.keys():
+                inf_dict = dict(r.json()['data']['avp'])
 
-                    return inf_dict
+                return inf_dict
         return None
 
     # ======================================pedia modify=========================================
@@ -249,7 +266,7 @@ class graphSearch(object):
         :return:
         """
 
-        uri = "http://127.0.0.1:8004/fuzzySearch?repertoryName=geo&words=" + words
+        uri = "http://127.0.0.1:8004/fuzzySearch?repertoryName=geo4&words=" + words
         r = requests.post(uri)
         ent_list = list(r.json())
 
@@ -405,6 +422,22 @@ class graphSearch(object):
             return None
 
         return pro_list
+
+    def getRelList(self, entity):
+        """
+        得到一个实体的属性关系名称
+        :param entity: 实体名称
+        :return: 实体的属性/关系名
+        """
+
+        uri = "http://10.10.1.202:8004/getRel?repertoryName=geo4&entity=" + entity
+        r = requests.post(uri)
+        rel_list = list(r.json())
+
+        if rel_list == []:
+            return None
+
+        return rel_list
 
     def getEntityByType(self, etype):
         """
