@@ -31,7 +31,7 @@ class graphSearch(object):
         :param type:
         :return:
         """
-        uri = "http://10.10.1.202:8004/getRelByType?repertoryName=geo4&type="+type
+        uri = "http://localhost:8004/getRelByType?repertoryName=geo4&type="+type
         r = requests.post(uri)
         rel_list = list(r.json())
 
@@ -43,7 +43,7 @@ class graphSearch(object):
         :param type:
         :return:
         """
-        uri = "http://10.10.1.202:8004/getProByType?repertoryName=geo4&type="+type
+        uri = "http://localhost:8004/getProByType?repertoryName=geo4&type="+type
         r = requests.post(uri)
         pro_list = list(r.json())
 
@@ -56,7 +56,7 @@ class graphSearch(object):
         :return:
         """
 
-        uri = "http://10.10.1.202:8004/getProPredicate?repertoryName=geo4&label="+label
+        uri = "http://localhost:8004/getProPredicate?repertoryName=geo4&label="+label
         r = requests.post(uri)
         ans = list(r.json())
         if len(ans)>0:
@@ -70,7 +70,7 @@ class graphSearch(object):
         :param label:
         :return:
         """
-        uri = "http://10.10.1.202:8004/getRelPredicate?repertoryName=geo4&label="+label
+        uri = "http://localhost:8004/getRelPredicate?repertoryName=geo4&label="+label
         r = requests.post(uri)
         predicate = list(r.json())[0]
 
@@ -82,7 +82,7 @@ class graphSearch(object):
         :param label:
         :return:
         """
-        uri = "http://10.10.1.202:8004/getSubject?repertoryName=geo4&label=" + label
+        uri = "http://localhost:8004/getSubject?repertoryName=geo4&label=" + label
         # print("label",label)
         r = requests.post(uri)
         subject = list(r.json())
@@ -97,7 +97,7 @@ class graphSearch(object):
         :param property:
         :return:
         """
-        uri = "http://10.10.1.202:8004/getValueByPro?repertoryName=geo4&entityType=" + type+"&property="+property
+        uri = "http://localhost:8004/getValueByPro?repertoryName=geo4&entityType=" + type+"&property="+property
         r = requests.post(uri)
         value_list = list(r.json())
         return value_list
@@ -108,7 +108,7 @@ class graphSearch(object):
         :param data:
         :return:
         """
-        uri = "http://10.10.1.202:8004/resetTripleToRepertory?"
+        uri = "http://localhost:8004/resetTripleToRepertory?"
         ret = requests.post(uri, data=data)
         print(ret)
 
@@ -118,7 +118,7 @@ class graphSearch(object):
         :param data:
         :return:
         """
-        uri = "http://10.10.1.202:8004/resetRelTripleToRepertory?"
+        uri = "http://localhost:8004/resetRelTripleToRepertory?"
         ret = requests.post(uri, data=data)
         print(ret)
 
@@ -129,7 +129,7 @@ class graphSearch(object):
         :param property:
         :return:
         """
-        uri = "http://10.10.1.202:8004/getValueByRel?repertoryName=geo4&entityType=" + type+"&relation="+property
+        uri = "http://localhost:8004/getValueByRel?repertoryName=geo4&entityType=" + type+"&relation="+property
         r = requests.post(uri)
         value_list = list(r.json())
         return value_list
@@ -144,7 +144,7 @@ class graphSearch(object):
         """
 
         data = {'repertoryName': 'geo4', 'tripleList': str(tripleList)}
-        uri = "http://10.10.1.202:8004/addTripleToRepertory?"
+        uri = "http://localhost:8004/addTripleToRepertory?"
         ret = requests.post(uri, data=data)
         print(ret)
 
@@ -157,7 +157,7 @@ class graphSearch(object):
         :return:
         """
         data = {'repertoryName': 'geo4', 'tripleList': str(tripleList)}
-        uri = "http://10.10.1.202:8004/addRelToRepertory?"
+        uri = "http://localhost:8004/addRelToRepertory?"
         ret = requests.post(uri, data=data)
         print(ret)
 
@@ -171,7 +171,7 @@ class graphSearch(object):
         """
 
         data = {'repertoryName': 'geo4', 'tripleList': str(tripleList)}
-        uri = "http://10.10.1.202:8004/deleteTripleToRepertory?"
+        uri = "http://localhost:8004/deleteTripleToRepertory?"
         ret = requests.post(uri, data=data)
         print(ret)
 
@@ -184,7 +184,7 @@ class graphSearch(object):
         :return:
         """
         data = {'repertoryName': 'geo4', 'tripleList': str(tripleList)}
-        uri = "http://10.10.1.202:8004/deleteRelToRepertory?"
+        uri = "http://localhost:8004/deleteRelToRepertory?"
         ret = requests.post(uri, data=data)
         print(ret)
 
@@ -193,7 +193,7 @@ class graphSearch(object):
         propertyUri = self.getPredicate(label)
         print(propertyUri)
         data = {'repertoryName': 'geo4', 'propertyUri': propertyUri}
-        uri = "http://10.10.1.202:8004/deleteCurProperty?"
+        uri = "http://localhost:8004/deleteCurProperty?"
         ret = requests.post(uri,data=data)
         print(ret)
 
@@ -202,28 +202,28 @@ class graphSearch(object):
         propertyUri = self.getRelPredicate(label)
         print(propertyUri)
         data = {'repertoryName': 'geo4', 'propertyUri': propertyUri}
-        uri = "http://10.10.1.202:8004/deleteCurProperty?"
+        uri = "http://localhost:8004/deleteCurProperty?"
         ret = requests.post(uri,data=data)
         print(ret)
 
     def addProperty(self,propertyName,pinyinName):
 
         data = {'repertoryName': 'geo4', 'propertyName': propertyName, 'pinyinName':pinyinName}
-        uri = "http://10.10.1.202:8004/addProperty?"
+        uri = "http://localhost:8004/addProperty?"
         ret = requests.post(uri, data=data)
         print(ret)
 
     def addRelation(self, relationName, pinyinName):
 
         data = {'repertoryName': 'geo4', 'relationName': relationName, 'pinyinName': pinyinName}
-        uri = "http://10.10.1.202:8004/addRelation?"
+        uri = "http://localhost:8004/addRelation?"
         ret = requests.post(uri, data=data)
         print(ret)
 
     def deleteTripleBySAP(self,subject,predicate):
 
         data = {'repertoryName': 'geo4', 'subject': subject, 'predicate': predicate}
-        uri = "http://10.10.1.202:8004/deleteTripleBySAP?"
+        uri = "http://localhost:8004/deleteTripleBySAP?"
         ret = requests.post(uri, data=data)
         print(ret)
 
@@ -259,7 +259,7 @@ class graphSearch(object):
         :return:
         """
 
-        uri = "http://10.10.1.202:8004/fuzzySearch?repertoryName=geo4&words=" + words
+        uri = "http://localhost:8004/fuzzySearch?repertoryName=geo4&words=" + words
         r = requests.post(uri)
         ent_list = list(r.json())
 
@@ -274,12 +274,12 @@ class graphSearch(object):
         """
 
         """获取属性信息"""
-        uri = "http://10.10.1.202:8004/getEntityByLabelWithPro?repertoryName=geo4&entityName=" + entity
+        uri = "http://localhost:8004/getEntityByLabelWithPro?repertoryName=geo4&entityName=" + entity
         r = requests.post(uri)
         pro_list = list(r.json())
 
         """获取关系信息"""
-        uri = "http://10.10.1.202:8004/getEntityByLabelWithRel?repertoryName=geo4&entityName=" + entity
+        uri = "http://localhost:8004/getEntityByLabelWithRel?repertoryName=geo4&entityName=" + entity
         r = requests.post(uri)
         rel_list = list(r.json())
         return pro_list, rel_list
@@ -293,7 +293,7 @@ class graphSearch(object):
         """
 
         """获取属性信息"""
-        uri = "http://10.10.1.202:8004/getEntityByLabelWithProName?repertoryName=geo4&entityName=" + entity
+        uri = "http://localhost:8004/getEntityByLabelWithProName?repertoryName=geo4&entityName=" + entity
         r = requests.post(uri)
         pro_list = list(r.json())
         return pro_list
@@ -368,7 +368,7 @@ class graphSearch(object):
         :return: 实体的属性（限制了类型）
         """
 
-        uri = "http://10.10.1.202:8004/getPro?repertoryName=geo4&entity=" + entity
+        uri = "http://localhost:8004/getPro?repertoryName=geo4&entity=" + entity
         r = requests.post(uri)
         pro_list = list(r.json())
 
@@ -379,7 +379,7 @@ class graphSearch(object):
     """
     def getProByLabel(self,label):
         
-        uri = "http://10.10.1.202:8004/getProByLabel?repertoryName=geo4&label="+label
+        uri = "http://localhost:8004/getProByLabel?repertoryName=geo4&label="+label
         r = requests.post(uri)
         pro_list = list(r.json())
 
@@ -393,7 +393,7 @@ class graphSearch(object):
         :return: 实体的关系名
         """
 
-        uri = "http://10.10.1.202:8004/getRel?repertoryName=geo4&entity=" + entity
+        uri = "http://localhost:8004/getRel?repertoryName=geo4&entity=" + entity
         r = requests.post(uri)
         rel_list = list(r.json())
 
@@ -408,9 +408,10 @@ class graphSearch(object):
         :param entity: 实体
         :return: 实体子类
         """
+        print("etype",etype)
 
         """获取子类"""
-        uri = "http://10.10.1.202:8004/getEntityByType?repertoryName=geo4&entityName=" + etype
+        uri = "http://127.0.0.1:8004/getEntityByType?repertoryName=geo4&entityName=" + etype
         r = requests.post(uri)
         son_list = list(r.json())
 
@@ -427,7 +428,7 @@ class graphSearch(object):
         """
 
         """获取父类"""
-        uri = "http://10.10.1.202:8004/getFather?repertoryName=geo4&entityName=" + entity
+        uri = "http://localhost:8004/getFather?repertoryName=geo4&entityName=" + entity
         r = requests.post(uri)
         father_list = list(r.json())
 
@@ -443,7 +444,7 @@ class graphSearch(object):
         :param keytype:
         :return:
         """
-        uri = "http://10.10.1.202:8004/getObjectBySAPLimitType?repertoryName=geo4&entity=" + subject + "&relation=" + predicate + "&type=" + keytype
+        uri = "http://localhost:8004/getObjectBySAPLimitType?repertoryName=geo4&entity=" + subject + "&relation=" + predicate + "&type=" + keytype
         r = requests.post(uri)
         obj_list = list(r.json())
         if obj_list is None:
@@ -462,7 +463,7 @@ class graphSearch(object):
         :return: 实体列表
         """
 
-        uri = "http://10.10.1.202:8004/getEntityByRelLimitType?repertoryName=geo4&entity="+entity+"&relation="+property+"&type="+keyword
+        uri = "http://localhost:8004/getEntityByRelLimitType?repertoryName=geo4&entity="+entity+"&relation="+property+"&type="+keyword
         r = requests.post(uri)
         ent_list = list(r.json())
 

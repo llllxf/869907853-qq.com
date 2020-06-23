@@ -109,6 +109,7 @@ class matchWords(object):
             return calculate_type,match_result,calculate_inf
 
         calculate_type, calculate_inf, match_result = self.calculate_util.checkCalculateDist(words)
+        print(calculate_type,"calculate_type")
         if calculate_type is not None:
             if calculate_inf == 'task_calculate_ask':
                 return calculate_type, match_result, calculate_inf

@@ -24,7 +24,7 @@ class calculateNLU(object):
         self.calculate_most_aiml = Kernel()
         self.calculate_most_aiml.learn(project_path + '/resource/pattern_for_most.aiml')
         self.calculate_dist_aiml = Kernel()
-        self.calculate_dist_aiml.learn(project_path + '/resource/pattern_for_dist.aiml')
+        self.calculate_dist_aiml.learn(project_path + '/resource/pattern_for_distance.aiml')
 
     def is_Chinese(self,word):
         for ch in word:
@@ -128,13 +128,24 @@ class calculateNLU(object):
 
             if 'area' in ans:
                 ask_predicate.append('面积')
-                predicate_adj.append('最大')
+                if 'most' in ans:
+
+                    predicate_adj.append('最大')
+                elif 'least' in ans:
+                    predicate_adj.append('最小')
             elif 'vol' in ans:
                 ask_predicate.append('蓄水量')
-                predicate_adj.append('最大')
+                if 'most' in ans:
+
+                    predicate_adj.append('最大')
+                elif 'least' in ans:
+                    predicate_adj.append('最小')
             elif 'deep' in ans:
                 ask_predicate.append('深度')
-                predicate_adj.append('最深')
+                if 'most' in ans:
+                    predicate_adj.append('最深')
+                elif 'least' in ans:
+                    predicate_adj.append('最浅')
 
 
         elif 'river' in ans:
@@ -143,20 +154,33 @@ class calculateNLU(object):
 
             if 'area' in ans:
                 ask_predicate.append('面积')
-                predicate_adj.append('最大')
+                if 'most' in ans:
+                    predicate_adj.append('最大')
+                elif 'least' in ans:
+                    predicate_adj.append('最小')
             elif 'flow' in ans:
                 ask_predicate.append('流量')
-                predicate_adj.append('最大')
+                if 'most' in ans:
+                    predicate_adj.append('最大')
+                elif 'least' in ans:
+                    predicate_adj.append('最小')
             elif 'long' in ans:
                 ask_predicate.append('长度')
-                predicate_adj.append('最长')
+                if 'most' in ans:
+                    predicate_adj.append('最长')
+                elif 'least' in ans:
+                    predicate_adj.append('最短')
 
         elif 'mountain' in ans:
             ask_type.append('山峰')
             ask_type.append('山脉')
             if 'high' in ans:
                 ask_predicate.append('海拔')
-                predicate_adj.append('最高')
+                if 'most' in ans:
+
+                    predicate_adj.append('最高')
+                elif 'least' in ans:
+                    predicate_adj.append('最低')
             if 'south' in ans:
                 ask_predicate.append('纬度')
                 predicate_adj.append('最南')
@@ -177,11 +201,17 @@ class calculateNLU(object):
             ask_type.append('海洋')
             if 'area' in ans:
                 ask_predicate.append('面积')
-                predicate_adj.append('最大')
+                if 'most' in ans:
+                    predicate_adj.append('最大')
+                elif 'least' in ans:
+                    predicate_adj.append('最小')
             if 'deep' in ans:
                 ask_predicate.append('深度')
                 ask_predicate.append('')
-                predicate_adj.append('最深')
+                if 'most' in ans:
+                    predicate_adj.append('最深')
+                elif 'least' in ans:
+                    predicate_adj.append('最浅')
 
 
         ent_dict = {'limit': limit_location, 'ask': ask_type, 'predicate': ask_predicate, 'predicate_adj':predicate_adj}

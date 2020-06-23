@@ -86,15 +86,15 @@ class processNLU(object):
         :param ask_ent:
         :return:
         """
-        if 'most' in ask_type:
+        if ('most' in ask_type) or ('least' in ask_type) :
 
             ask_ent['task_type']=ask_type
             ask_ent['words_type'] = 'task_calculate'
-
             return ask_ent
         if 'dist' in ask_type:
             ask_ent['task_type'] = ask_type
             ask_ent['words_type'] = 'task_calculate'
+
 
 
     def dealWithAsking(self,ask_words, ask_ent, words_type):

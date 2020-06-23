@@ -79,7 +79,9 @@ class calculateBussiness(object):
 
             son_list = []
             for ask in ans_dict['ask']:
+
                 son_list = son_list + self.graph_util.getEntityByType(ask)
+                print("???",son_list)
             son_list = list(set(son_list))
         if len(son_list) < 1:
             return "对不起，暂时无法回答。\n", ans_dict['task_type']
@@ -107,3 +109,42 @@ class calculateBussiness(object):
             print("===========================================")
 
             return ent_list[max_index], ans_dict['task_type']
+
+    def doLeastCalculate(self,ans_dict):
+        spefify = ans_dict['predicate'] + ans_dict['predicate_adj']
+        if ans_dict['limit'][0] != '世界':
+            son_list = self.localtion_util.getLocationByLimit(ans_dict['ask'][0], ans_dict['limit'][0])
+        else:
+
+            son_list = []
+            for ask in ans_dict['ask']:
+
+                son_list = son_list + self.graph_util.getEntityByType(ask)
+                print("???",son_list)
+            son_list = list(set(son_list))
+        if len(son_list) < 1:
+            return "对不起，暂时无法回答。\n", ans_dict['task_type']
+
+        print("查找子类： ", son_list)
+
+        ans = self.matchSpecify(son_list, spefify)
+
+        if ans != None and len(ans) > 0:
+            print("通过匹配实体的特征值得到最值信息")
+            print("===========================================")
+            return ans, ans_dict['task_type']
+        else:
+
+            ent_list, num_list = self.getNumCollect(son_list, ans_dict['predicate'])
+
+            if 'dir' in ans_dict['task_type']:
+                form_num_list = [getSingelDirNum(num, ans_dict['task_type']) for num in num_list]
+            else:
+                form_num_list = [getSingelCompareNum(num) for num in num_list]
+
+            min_index = np.argmin(np.array(form_num_list))
+
+            print("通过比较实体的" + ans_dict['predicate'][0] + "得到最值信息")
+            print("===========================================")
+
+            return ent_list[min_index], ans_dict['task_type']

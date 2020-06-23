@@ -75,6 +75,7 @@ class DialogManagement(object):
             if 'most' in ans_dict['task_type']:
 
                 ans,task_type = self.calculate_bussiness.doMostCalculate(ans_dict)
+                return ans,task_type
             elif 'least' in ans_dict['task_type']:
                 ans, task_type = self.calculate_bussiness.doLeastCalculate(ans_dict)
 
@@ -158,7 +159,7 @@ class DialogManagement(object):
                         ans_str = ans_str + self.doNLG(key_ent, ans_type, ans)
                 """
             task_type = "task_reverse"
-            key_ent, ans_type, ans = self.normal_bussiness.dealNLU(ask_words, task_type, entity_array[0], property_array[0],
+            key_ent, ans_type, ans = self.normal_bussiness.doNormal(ask_words, task_type, entity_array[0], property_array[0],
                                                   keywords_array[0])
             if ans != None and ans != "":
                 ans_str = ans_str + self.doNLG(key_ent, ans_type, ans)

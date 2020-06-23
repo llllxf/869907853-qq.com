@@ -89,6 +89,7 @@ class localtionInfernce(object):
 
 
         son_list = self.search_util.getEntityByType(entityType)
+
         for son in son_list:
             son_location = self.getLocation(son)
             if location in son_location:
