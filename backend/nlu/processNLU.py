@@ -37,7 +37,7 @@ class processNLU(object):
         """
         #words_type,ask_words,ask_ent = self.words_util.classify(words)
         words_type, match_result, words_inf = self.words_util.classify(words)
-        #print(words_type,match_result,words_inf,"???")
+
 
         if 'task_calculate' in words_type:
 
@@ -86,6 +86,7 @@ class processNLU(object):
         :param ask_ent:
         :return:
         """
+
         if ('most' in ask_type) or ('least' in ask_type) :
 
             ask_ent['task_type']=ask_type

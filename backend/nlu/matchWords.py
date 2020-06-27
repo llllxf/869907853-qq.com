@@ -81,8 +81,6 @@ class matchWords(object):
             比较问题中如果返回的是反问句，那么匹配结果就是实际操作对象，也就是作用是正常比较问句的抽取信息，第三个值是反问标识
         """
 
-
-
         compare_type,compare_inf,match_result = self.compare_util.checkCompare(words)
 
         if compare_type is not None:
