@@ -106,8 +106,10 @@ class matchWords(object):
         对于比较问题，第一个返回值是问句类型，第二个值是模版匹配结果，第三个返回值是抽取的句子信息
             比较问题中如果返回的是反问句，那么匹配结果就是实际操作对象，也就是作用是正常比较问句的抽取信息，第三个值是反问标识
         """
+
         if len(last_sentence)>0:
             words = self.dealWithLastSentence(words,last_sentence)
+
 
         compare_type,compare_inf,match_result = self.compare_util.checkCompare(words)
 
