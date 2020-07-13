@@ -26,8 +26,10 @@ class processNLU(object):
         self.form_util = formWords()
         self.task_sort = ['task_son_kw_match','task_normal_pro','task_normal_rel','task_son_match','task_limit_sub','task_singal_entity']
 
+    def formAsking(self,words):
+        return self.words_util.formAsking(words)
 
-    def differentWordsType(self,words):
+    def differentWordsType(self,words,last_sentence):
         """
         问句有不同的类型，不同的类型有不同的处理方式来达到对问句的理解
 
@@ -36,8 +38,9 @@ class processNLU(object):
         :return: 不同类型的问句统一的抽象形式，即抽取实体、属性/关系
         """
         #words_type,ask_words,ask_ent = self.words_util.classify(words)
-        words_type, match_result, words_inf = self.words_util.classify(words)
-        #print(words_type,match_result,words_inf,"???")
+        words_type, match_result, words_inf = self.words_util.classify(words,last_sentence)
+
+
 
         if 'task_calculate' in words_type:
 
@@ -47,6 +50,7 @@ class processNLU(object):
                 return ans_dict
 
             ans_dict = self.dealWithCalculate(match_result,words_inf)
+
 
             return ans_dict
 
@@ -67,7 +71,7 @@ class processNLU(object):
 
 
             return ans_dict
-
+        """
         elif words_type == 'task_whether':
             ask_words = self.words_util.formAsking(match_result,words_inf)
             print("调整问题为: ", ask_words)
@@ -77,7 +81,9 @@ class processNLU(object):
             ans_dict = {'ask_words': ask_words, 'entity_array': entity_array, 'coo': coo, 'coo_index': coo_index,
                         'property_array': property_array, 'keywords_array': keywords_array,
                         'task_type_array': task_type_array, 'words_type': words_type, 'ask_ent': ask_ent}
+            print("wether",ans_dict)
             return ans_dict
+        """
 
     def dealWithCalculate(self,ask_type,ask_ent):
         """
@@ -86,6 +92,7 @@ class processNLU(object):
         :param ask_ent:
         :return:
         """
+
         if ('most' in ask_type) or ('least' in ask_type) :
 
             ask_ent['task_type']=ask_type
@@ -94,6 +101,7 @@ class processNLU(object):
         if 'dist' in ask_type:
             ask_ent['task_type'] = ask_type
             ask_ent['words_type'] = 'task_calculate'
+            return ask_ent
 
 
 

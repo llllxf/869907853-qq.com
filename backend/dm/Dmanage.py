@@ -38,14 +38,23 @@ class DialogManagement(object):
         self.compare_bussiness = compareBussiness()
         self.calculate_bussiness = calculateBussiness()
 
-
-
-
+        self.last_sentence = []
+        self.wether = []
 
     def doNLU(self,words):
 
         ans_str = ""
-        ans_dict = self.nlu_util.differentWordsType(words)
+
+        ask_words,ans_ent = self.nlu_util.formAsking(words)
+
+
+        if ask_words is not None:
+            words = ask_words
+            self.wether = []
+            self.wether.append(ans_ent)
+
+        ans_dict = self.nlu_util.differentWordsType(words,self.last_sentence)
+
 
         words_type = ans_dict['words_type']
 
@@ -60,7 +69,7 @@ class DialogManagement(object):
 
             #compare_dict = self.dealCompare(entity_array,[property])
 
-            ans_str += self.doNLG(None, "ans_items", compare_dict)
+            ans_str += self.doNLG(None, "ans_items", compare_dict,self.wether)
             if 'less' in task_type:
                 ans_str += self.nlg_util.compareLessNLG(task_type, compare_dict)
             else:
@@ -71,53 +80,27 @@ class DialogManagement(object):
         if 'task_calculate' in words_type:
 
             if ans_dict['task_type'] == 'task_calculate_ask':
+                self.last_sentence.append(words)
                 return [ans_dict['ask']]
             if 'most' in ans_dict['task_type']:
 
                 ans,task_type = self.calculate_bussiness.doMostCalculate(ans_dict)
+                self.last_sentence = []
+                ans = self.nlg_util.ansMost(ans,self.wether)
+                self.wether = []
+
                 return ans,task_type
             elif 'least' in ans_dict['task_type']:
                 ans, task_type = self.calculate_bussiness.doLeastCalculate(ans_dict)
-
+                self.last_sentence = []
+                ans = self.nlg_util.ansMost(ans,self.wether)
+                self.wether = []
                 return ans,task_type
-                """
+            elif 'dist' in ans_dict['task_type']:
+                ans, task_type = self.calculate_bussiness.doDistCalculate(ans_dict)
+                self.last_sentence = []
+                return ans,task_type
 
-                spefify = ans_dict['predicate'] + ans_dict['predicate_adj']
-                if ans_dict['limit'][0] != '世界':
-                    son_list = self.localtion_util.getLocationByLimit(ans_dict['ask'][0], ans_dict['limit'][0])
-                else:
-
-                    son_list = []
-                    for ask in ans_dict['ask']:
-                        son_list = son_list + self.graph_util.getEntityByType(ask)
-                    son_list = list(set(son_list))
-                if len(son_list) < 1:
-                    return "对不起，暂时无法回答。\n", ans_dict['task_type']
-
-                print("查找子类： ", son_list)
-
-                ans = self.calculate_bussiness.matchSpecify(son_list, spefify)
-
-                if ans != None and len(ans) > 0:
-                    print("通过匹配实体的特征值得到最值信息")
-                    print("===========================================")
-                    return ans, ans_dict['task_type']
-                else:
-
-                    ent_list, num_list = self.calculate_bussiness.getNumCollect(son_list, ans_dict['predicate'])
-                    print(num_list, "numlist")
-                    if 'dir' in ans_dict['task_type']:
-                        form_num_list = [getSingelDirNum(num, ans_dict['task_type']) for num in num_list]
-                    else:
-                        form_num_list = [getSingelCompareNum(num) for num in num_list]
-
-                    max_index = np.argmax(np.array(form_num_list))
-
-                    print("通过比较实体的" + ans_dict['predicate'][0] + "得到最值信息")
-                    print("===========================================")
-
-                    return ent_list[max_index], ans_dict['task_type']
-            """
 
         if words_type == 'task_normal':
             ask_words = ans_dict['ask_words']
@@ -134,7 +117,7 @@ class DialogManagement(object):
                                                       keywords_array[i])
 
                 if ans != None and ans != "":
-                    ans_str = ans_str + self.doNLG(key_ent, ans_type, ans)
+                    ans_str = ans_str + self.doNLG(key_ent, ans_type, ans,self.wether)
                     return ans_str, task_type_array[i]
 
             for i in range(3):
@@ -142,7 +125,8 @@ class DialogManagement(object):
                     key_ent, ans_type, ans = self.normal_bussiness.doNormal(ask_words, "task_singal_entity", entity_array[i],
                                                           property_array[i], keywords_array[i])
                 if ans != None and ans != "":
-                    ans_str = ans_str + self.doNLG(key_ent, ans_type, ans)
+                    ans_str = ans_str + self.doNLG(key_ent, ans_type, ans, self.wether)
+                    self.wether = []
                     return ans_str, "task_singal_entity"
                 """
                 ans = None
@@ -162,7 +146,8 @@ class DialogManagement(object):
             key_ent, ans_type, ans = self.normal_bussiness.doNormal(ask_words, task_type, entity_array[0], property_array[0],
                                                   keywords_array[0])
             if ans != None and ans != "":
-                ans_str = ans_str + self.doNLG(key_ent, ans_type, ans)
+                ans_str = ans_str + self.doNLG(key_ent, ans_type, ans, self.wether)
+                self.wether = []
                 return ans_str, "task_reverse"
 
             return "", None
@@ -176,9 +161,9 @@ class DialogManagement(object):
     """
 
 
-    def doNLG(self,entity,ans_type,ans):
+    def doNLG(self,entity,ans_type,ans,wether):
 
-        ans_str = self.nlg_util.getAns(entity, ans_type, ans)
+        ans_str = self.nlg_util.getAns(entity, ans_type, ans,wether)
         return ans_str
 
 
@@ -214,8 +199,3 @@ if __name__ == '__main__':
             continue
         ans = a.doNLU(s)
         print(ans[0])
-
-
-
-
-

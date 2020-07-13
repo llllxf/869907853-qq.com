@@ -368,7 +368,8 @@ class normalBussiness(object):
         :param keyword: 宾语
         :return:
         """
-        ans = self.graph_util.getEntityByRel(keyword[0], property[0], entity[0])
+
+        ans = self.graph_util.getEntityByRelLimitType(keyword[0], property[0], entity[0])
         if ans != None:
             return ans
         return None

@@ -81,7 +81,7 @@ class calculateBussiness(object):
             for ask in ans_dict['ask']:
 
                 son_list = son_list + self.graph_util.getEntityByType(ask)
-                print("???",son_list)
+
             son_list = list(set(son_list))
         if len(son_list) < 1:
             return "对不起，暂时无法回答。\n", ans_dict['task_type']
@@ -148,3 +148,22 @@ class calculateBussiness(object):
             print("===========================================")
 
             return ent_list[min_index], ans_dict['task_type']
+
+    def doDistCalculate(self, ans_dict):
+        entity_list = ans_dict['entity']
+        latitude = self.graph_util.getNums(entity_list,"纬度")
+        longitude = self.graph_util.getNums(entity_list,"经度")
+        #print(latitude)
+        #print(longitude)
+        formed_latitude = []
+        formed_longitude = []
+        for l in latitude:
+            formed_latitude.append(getSingelDirNum(l,"north"))
+        for l in longitude:
+            formed_longitude.append(getSingelDirNum(l,"east"))
+        #print(formed_latitude)
+        #print(formed_longitude)
+        a = np.abs(formed_latitude[0]-formed_latitude[1])*111
+        b = np.abs(formed_longitude[0]-formed_longitude[1])*111
+        c = "直线距离约为"+str(np.sqrt(a*a+b*b)).split('.')[0]+"千米"
+        return c,ans_dict['task_type']

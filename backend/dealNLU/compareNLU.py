@@ -202,7 +202,7 @@ class compareNLU(object):
 
 
 if __name__ == '__main__':
-    a = compareUtil()
-    a.checkCompare("hhhhh")
+    pass
+
 
 

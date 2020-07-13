@@ -6,7 +6,7 @@ import sys
 import os
 project_path = os.path.abspath(os.path.join(os.getcwd(), ".."))
 sys.path.append(project_path)
-
+"""
 import xlrd
 
 
@@ -29,6 +29,7 @@ def read_xlsx(filename):
             weidu = "N/A"
         f.writelines(ent+",经度,"+jingdu+"\n")
         f.writelines(ent + ",纬度," + weidu + "\n")
+"""
 
 
 def removeComma(filename):

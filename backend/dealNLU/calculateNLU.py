@@ -38,6 +38,7 @@ class calculateNLU(object):
         :param question:
         :return:
         """
+        print(question)
         mountain_list = read_file(project_path + "/data/compare/mountain.csv")
         hill_list = read_file(project_path + "/data/compare/hill.csv")
         mountain_list = sorted(mountain_list, key=lambda i: len(i), reverse=True)
@@ -48,11 +49,13 @@ class calculateNLU(object):
 
         for mountain in mountain_list:
             if mountain in question:
+
                 question = question.replace(mountain,"MOUNTAIN")
                 ask_mountain.append(mountain)
 
         for hill in hill_list:
             if hill in question:
+
                 question = question.replace(hill,"HILL")
                 ask_hill.append(hill)
 
@@ -60,8 +63,9 @@ class calculateNLU(object):
         if ans == "" or ans is None:
             return None, None, None
         else:
-            entity = hill+mountain
-            return "task_calculate_dist",entity,ans
+            entity = ask_hill+ask_mountain
+
+            return "task_calculate_dist",{'entity':entity},ans
 
     def checkCalculateMost(self,question):
         """
@@ -119,6 +123,7 @@ class calculateNLU(object):
             return 'task_calculate','task_calculate_ask',ans
 
         if 'lake' in ans:
+
             if '淡水湖' in question:
                 ask_type.append('淡水湖')
             elif '咸水湖' in question:

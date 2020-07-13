@@ -228,8 +228,21 @@ class generateAns(object):
             else:
                 return keys[1] + "比" + keys[0] + "流量小。\n"
 
+    def ansMost(self,ans,wether):
+        if self.ansWether(wether,ans):
+            return self.ansWether(wether,ans)
+        else:
+            return ans
 
-    def getAns(self,entity,task_type,ans_array):
+    def ansWether(self,wether,ans):
+        if len(wether) > 0 and wether[0] in ans:
+            return "是的\n"
+        elif len(wether) > 0 and wether[0] not in ans:
+            return "不是\n"
+        else:
+            return None
+
+    def getAns(self,entity,task_type,ans_array,wether):
         if ans_array == None:
 
             if entity == None:
@@ -243,10 +256,18 @@ class generateAns(object):
         if task_type == 'ans_list':
 
             ans = ",".join(ans_array)
+            wether_ans = self.ansWether(wether,ans)
+            if wether_ans:
+                return wether_ans
+
             return ans
         if task_type == 'ans_triple':
             ans = ""
             ans = ans + ans_array[0]+"的"+ans_array[1]+": "+ans_array[2]+"\n"
+            wether_ans = self.ansWether(wether, ans)
+            if wether_ans:
+                return wether_ans
+
             return ans
         if task_type == 'ans_items':
             ans = ""
@@ -254,6 +275,9 @@ class generateAns(object):
                 for pro, provalue in value.items():
                     provalue = sorted(provalue, key=lambda i: len(i), reverse=True)
                     ans = ans+name+"的"+pro+": "+provalue[0]+"\n"
+            wether_ans = self.ansWether(wether, ans)
+            if wether_ans:
+                return wether_ans
             #print("========================================================")
             #print(ans)
             return ans
