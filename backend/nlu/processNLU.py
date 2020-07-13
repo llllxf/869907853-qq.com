@@ -38,12 +38,10 @@ class processNLU(object):
         :return: 不同类型的问句统一的抽象形式，即抽取实体、属性/关系
         """
         #words_type,ask_words,ask_ent = self.words_util.classify(words)
-<<<<<<< HEAD
+
         words_type, match_result, words_inf = self.words_util.classify(words,last_sentence)
 
-=======
-        words_type, match_result, words_inf = self.words_util.classify(words)
->>>>>>> bf6cc3e58c0756702217c1a870fa48e6cc0ab8b6
+
 
 
         if 'task_calculate' in words_type:
