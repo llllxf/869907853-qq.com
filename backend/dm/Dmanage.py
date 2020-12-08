@@ -56,6 +56,7 @@ class DialogManagement(object):
         ans_dict = self.nlu_util.differentWordsType(words,self.last_sentence)
 
 
+
         words_type = ans_dict['words_type']
 
         if words_type == 'task_compare':
@@ -111,7 +112,15 @@ class DialogManagement(object):
             keywords_array = ans_dict['keywords_array']
             task_type_array = ans_dict['task_type_array']
             ask_ent = ans_dict['ask_ent']
-
+            print("抽取的实体: ",entity_array[0])
+            print("抽取的属性: ", property_array[0])
+            key_ent, ans_type, ans = self.normal_bussiness.doNormal(ask_words, task_type_array[0], entity_array[0],
+                                                                    property_array[0],
+                                                                    keywords_array[0])
+            if ans != None and ans != "":
+                ans_str = ans_str + self.doNLG(key_ent, ans_type, ans, self.wether)
+                return ans_str, task_type_array[0]
+            """
             for i in range(3):
                 key_ent, ans_type, ans = self.normal_bussiness.doNormal(ask_words, task_type_array[i], entity_array[i], property_array[i],
                                                       keywords_array[i])
@@ -128,20 +137,7 @@ class DialogManagement(object):
                     ans_str = ans_str + self.doNLG(key_ent, ans_type, ans, self.wether)
                     self.wether = []
                     return ans_str, "task_singal_entity"
-                """
-                ans = None
-                if (ans == None or ans == "") and (entity!=[] and entity != None):
-                    task_type = "task_reverse"
-                    key_ent, ans_type, ans = self.normal_bussiness.doNormal(ask_words, task_type, entity, property, keywords)
 
-
-                    ans_str = ans_str + self.doNLG(key_ent, ans_type, ans)
-
-                if len(coo) > 0:
-                    for c in coo:
-                        key_ent, ans_type, ans = self.normal_bussiness.dealNLU(ask_words, task_type, [c], property, keywords)
-                        ans_str = ans_str + self.doNLG(key_ent, ans_type, ans)
-                """
             task_type = "task_reverse"
             key_ent, ans_type, ans = self.normal_bussiness.doNormal(ask_words, task_type, entity_array[0], property_array[0],
                                                   keywords_array[0])
@@ -149,6 +145,7 @@ class DialogManagement(object):
                 ans_str = ans_str + self.doNLG(key_ent, ans_type, ans, self.wether)
                 self.wether = []
                 return ans_str, "task_reverse"
+            """
 
             return "", None
 
@@ -170,32 +167,12 @@ class DialogManagement(object):
 
 if __name__ == '__main__':
     a = DialogManagement()
-
-    """
-    fok = open("single.txt", "a")
-    fok2 = open("ok.txt", "a")
-    fno = open("noans.txt", "a")
-
-    questions = read_file(project_path+"/data/question2.txt")
-
-    for q in questions:
-
-        ans,task_type,pattern = a.doNLU(q)
-
-        if len(ans) == 0:
-            fno.writelines(q+"\n")
-        elif task_type == 'task_singal_entity':
-            fok.writelines(q+"\t"+pattern+"\n")
-            fok.writelines(ans+"\n")
-            fok.writelines("========================\n")
-        else:
-            fok2.writelines(q + "\t" + pattern + "\n")
-            fok2.writelines(ans + "\n")
-            fok2.writelines("========================\n")
-    """
     while(1):
         s = input("user: ")
         if s == "":
             continue
         ans = a.doNLU(s)
-        print(ans[0])
+        if ans[0] == '':
+            print("无法回答")
+        else:
+            print(ans[0])

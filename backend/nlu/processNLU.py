@@ -48,7 +48,7 @@ class processNLU(object):
 
             if words_inf == 'task_calculate_ask':
                 ans_dict = {'words_type':words_type,'ask':match_result,'task_type':words_inf}
-                #print(ans_dict,"ans_dict")
+
                 return ans_dict
 
             ans_dict = self.dealWithCalculate(match_result,words_inf)
@@ -65,11 +65,12 @@ class processNLU(object):
 
 
         elif words_type == 'task_normal':
-            ask_words = self.words_util.checkR(words)
-            ask_words, entity_array, coo, coo_index, property_array, keywords_array, task_type_array, words_type, ask_ent = self.dealWithAsking(ask_words, None, words_type)
+
+            ask_words, entity_array, coo, coo_index, property_array, keywords_array, task_type_array, words_type, ask_ent = self.dealWithNormal(words, words_type)
 
             ans_dict = {'ask_words':ask_words,'entity_array':entity_array,'coo':coo,'coo_index':coo_index,'property_array':property_array,'keywords_array':keywords_array,
                         'task_type_array':task_type_array,'words_type':words_type,'ask_ent':ask_ent}
+
 
 
             return ans_dict
@@ -107,7 +108,60 @@ class processNLU(object):
 
 
 
-    def dealWithAsking(self,ask_words, ask_ent, words_type):
+    def dealWithNormal(self,ask_words,words_type):
+        """
+        处理普通类型的问句，通过抽象出实体、属性/关系、疑问代词和谓语来匹配模版，模版的匹配涉及到句法依存、词性分析
+        :param words: 问句
+        :return:处理后的句子信息
+        """
+
+
+        #ask_words, ask_ent, words_type = self.words_util.formAsking(words)
+        #print("调整问题为: ", ask_words)
+        #print("询问实体", ask_ent)
+
+
+
+        cut_words = self.words_util.cutWords(ask_words)
+
+        ask_ent, father, template_word = self.words_util.getEnt(cut_words)
+
+        stander_words = self.words_util.getStandard(template_word,father)
+        cut_words = self.words_util.cutWords(stander_words)
+        cut_words[cut_words.index(self.words_util.getTemplateEnt(father))] = ask_ent
+
+        pattern, pattern_index, coo, coo_index, arcs_dict, reverse_arcs_dict, postags, hed_index = self.words_util.getWordsPattern(
+            cut_words)
+        entity_array_temp = []
+        property_array_temp = []
+        keywords_array_temp = []
+        task_type_array_temp = []
+        task_num = []
+        for p in pattern:
+            entity, property, keywords, task_type = self.pattern_util.matchPattern(p, pattern_index, cut_words)
+            entity_array_temp.append(entity)
+            property_array_temp.append(property)
+            if len(keywords) > 0:
+                keywords_array_temp.append(keywords)
+            else:
+                keywords_array_temp.append(None)
+            task_type_array_temp.append(task_type)
+            if task_type in self.task_sort:
+                task_num.append(self.task_sort.index(task_type))
+            else:
+                task_num.append(6)
+        sort_index = np.argsort(task_num)
+
+        entity_array = np.array(entity_array_temp)[sort_index]
+        property_array = np.array(property_array_temp)[sort_index]
+        keywords_array = np.array(keywords_array_temp)[sort_index]
+        task_type_array = np.array(task_type_array_temp)[sort_index]
+        #print(ask_words, entity_array, coo, coo_index, property_array, keywords_array, task_type_array,ask_ent)
+
+        return ask_words, entity_array, coo, coo_index, property_array, keywords_array, task_type_array,words_type, ask_ent
+
+
+    def dealWithAsking2(self,ask_words, ask_ent, words_type):
         """
         处理普通类型的问句，通过抽象出实体、属性/关系、疑问代词和谓语来匹配模版，模版的匹配涉及到句法依存、词性分析
         :param words: 问句
@@ -146,13 +200,13 @@ class processNLU(object):
                 entity, property, keywords, task_type = self.pattern_util.matchSingalEntity(p, pattern_index,
                                                                                             cut_words)
 
-            print("========================================================")
+            #print("========================================================")
 
-            print("关键实体: ", entity)
-            print("关键属性: ", property)
-            print("并列实体: ", coo)
-            print("属性限制: ", keywords)
-            print("任务类型: ", task_type)
+            #print("关键实体: ", entity)
+            #print("关键属性: ", property)
+            #print("并列实体: ", coo)
+            #print("属性限制: ", keywords)
+            #print("任务类型: ", task_type)
             entity_array_temp.append(entity)
             property_array_temp.append(property)
             if len(keywords)>0:
@@ -173,6 +227,7 @@ class processNLU(object):
         task_type_array = np.array(task_type_array_temp)[sort_index]
 
         return ask_words,entity_array,coo,coo_index,property_array,keywords_array,task_type_array,words_type,ask_ent
+
 
 if __name__ == '__main__':
     a = processNLU()

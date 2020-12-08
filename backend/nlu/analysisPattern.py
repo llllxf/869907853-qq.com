@@ -157,6 +157,7 @@ class PatternMatch(object):
 
         if pattern in self.entproV:
             """实体+属性v"""
+
             key_array = pattern.split("-")
             index = 0
             for pa in key_array:

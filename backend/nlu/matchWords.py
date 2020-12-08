@@ -8,7 +8,7 @@ project_path = os.path.abspath(os.path.join(os.getcwd(), ".."))
 sys.path.append(project_path)
 from data.data_process import read_file
 from nlu.LTPUtil import LTPUtil
-from graphSearch.graphSearch import graphSearch
+from graphSearch.graphSearch5 import graphSearch
 from dealNLU.compareNLU import compareNLU
 from dealNLU.calculateNLU import calculateNLU
 
@@ -37,6 +37,7 @@ class matchWords(object):
         self.instanceArray = list(set(read_file(project_path + "/data/allentity.csv")))
         self.instanceArray = sorted(self.instanceArray, key=lambda i: len(i), reverse=True)
 
+
         self.typeArray = list(set(read_file(project_path + "/data/etype.csv")))
         self.typeArray = sorted(self.typeArray, key=lambda i: len(i), reverse=True)
 
@@ -45,6 +46,9 @@ class matchWords(object):
 
         relArray = read_file(project_path + "/data/cleanrel.csv")
         self.relArray = sorted(relArray, key=lambda i: len(i), reverse=True)
+
+
+        self.template_ent = {'国家':'日本','湖泊':'洞庭湖','河流':'长江'}
 
         self.commonPro = []
         self.aliasArray = {}
@@ -98,6 +102,7 @@ class matchWords(object):
 
 
     def classify(self,words,last_sentence):
+
         """
         得到句子的类型，不同类型的句子进行初步整理
         :param words:
@@ -116,10 +121,10 @@ class matchWords(object):
         if compare_type is not None:
             if compare_inf == 'task_compare_ask':
                 return compare_type,match_result,compare_inf
-            print("任务类型: ",compare_type)
-            print("问题类型: ", match_result)
-            print("比较实体: ",compare_inf)
-            print("===========================================")
+            #print("任务类型: ",compare_type)
+            #print("问题类型: ", match_result)
+            #print("比较实体: ",compare_inf)
+            #print("===========================================")
 
             return compare_type,match_result,compare_inf
 
@@ -127,12 +132,12 @@ class matchWords(object):
         if calculate_type is not None:
             if calculate_inf == 'task_calculate_ask':
                 return calculate_type,match_result,calculate_inf
-            print("任务类型: ",calculate_type)
-            print("问题类型: ", match_result)
-            print("最值对象: ",calculate_inf['ask'])
-            print("最值属性: ",calculate_inf['predicate'])
-            print("最值倾向: ",calculate_inf['predicate_adj'])
-            print("===========================================")
+            #print("任务类型: ",calculate_type)
+            #print("问题类型: ", match_result)
+            #print("最值对象: ",calculate_inf['ask'])
+            #print("最值属性: ",calculate_inf['predicate'])
+            #print("最值倾向: ",calculate_inf['predicate_adj'])
+            #print("===========================================")
 
             return calculate_type,match_result,calculate_inf
 
@@ -141,10 +146,10 @@ class matchWords(object):
         if calculate_type is not None:
             if calculate_inf == 'task_calculate_ask':
                 return calculate_type, match_result, calculate_inf
-            print("任务类型: ", compare_type)
-            print("问题类型: ", match_result)
-            print("询问对象: ", calculate_inf)
-            print("===========================================")
+            #print("任务类型: ", compare_type)
+            #print("问题类型: ", match_result)
+            #print("询问对象: ", calculate_inf)
+            #print("===========================================")
 
             return calculate_type, match_result, calculate_inf
 
@@ -422,6 +427,7 @@ class matchWords(object):
 
         tlp_pattern, arcs_dict, reverse_arcs_dict, postags, hed_index = self.ltp_util.get_sentence_pattern(cut_words)
         postags = list(postags)
+
         print("========================================================")
         print("分词: ", cut_words)
 
@@ -594,6 +600,60 @@ class matchWords(object):
         print("词性分析: ", postags)
 
         return pattern,pattern_index,coo,coo_index,arcs_dict,reverse_arcs_dict,postags,hed_index,find_entity, find_pro
+    def getEnt(self,cut_words):
+        """
+        根据用户抽取实体，得到模版问句，和询问的实体类型
+        :param words: 用户问句
+        :return:
+        """
+        ent = ""
+        template_word = ""
+
+        father = ""
+
+        for word in cut_words:
+
+            if word in self.instanceArray:
+                ent = word
+                father = self.graph_util.getFather(ent)[0]
+                print(father,self.template_ent[father])
+                cut_words[cut_words.index(word)] = self.template_ent[father]
+                template_word = "".join(cut_words)
+                break
+
+        return ent,father,template_word
+
+    def getTemplateEnt(self,father):
+        return self.template_ent[father]
+    def getStandard(self,words,father):
+        """
+        匹配模版库，得到标准问句
+        :param words:
+        :param type:
+        :return:
+        """
+
+
+        template_questions = list(read_file(project_path + "/template_library/"+father+".csv"))
+        #print(template_questions)
+        template_arr = []
+        for template in template_questions:
+
+            if template != "==========":
+                template_arr.append(template)
+            else:
+                if words in template_arr:
+                    return template_arr[0]
+                else:
+                    template_arr = []
+
+
+
+
+
+
+
+
 
 """
 1.询问属性内容的问题：给出实体，询问属性，得到属性值

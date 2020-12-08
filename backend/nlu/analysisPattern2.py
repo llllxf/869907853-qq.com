@@ -30,7 +30,7 @@ class PatternMatch(object):
         self.nluMatch = {'task_common':[['ent','pro'],['ent']],'task_difinition':[['ent'],['ent-pro'],['pro-ent']],
                          'task_rel':[['ent','ent','pro']],'task_btw_ent':[['ent','ent']]}
 
-        self.country = read_file(project_path + "/data/country.csv")
+        self.country = read_file(project_path + "/data/国家.csv")
         """
         实体+属性
         喜马拉雅山的特征是什么

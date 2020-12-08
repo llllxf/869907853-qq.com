@@ -1,4 +1,4 @@
-var $messages = $('.messages-content'),
+var $messages = $('.map-content-9'),
     d, h, m,
     i = 0;
 
@@ -9,33 +9,22 @@ $(window).load(function() {
   }, 100);
 });
 
-function updateScrollbar() {
-  $messages.mCustomScrollbar("update").mCustomScrollbar('scrollTo', 'bottom', {
-    scrollInertia: 10,
-    timeout: 0
-  });
-}
 
-function setDate(){
-  d = new Date()
-  if (m != d.getMinutes()) {
-    m = d.getMinutes();
-    $('<div class="timestamp">' + d.getHours() + ':' + m + '</div>').appendTo($('.message:last'));
-  }
-}
+
+
 
 function insertMessage() {
-  msg = $('.message-input').val();
+  msg = $('.message').val();
   if ($.trim(msg) == '') {
     return false;
   }
   $('<div class="message message-personal">' + msg + '</div>').appendTo($('.mCSB_container')).addClass('new');
   setDate();
-  $('.message-input').val(null);
-  updateScrollbar();
+  $('.message').val(null);
+
 	interact(msg);
   setTimeout(function() {
-    //fakeMessage();
+
   }, 1000 + (Math.random() * 20) * 100);
 }
 

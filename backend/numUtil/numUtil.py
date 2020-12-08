@@ -72,6 +72,7 @@ def getCompareNum(compare_dict,property):
     :param property:
     :return:
     """
+    #print(compare_dict,property)
 
     keys = list(compare_dict.keys())
     array_one = list(jieba.cut(compare_dict[keys[0]][property][0]))
@@ -82,6 +83,8 @@ def getCompareNum(compare_dict,property):
     if array_two == ['N', '/', 'A']:
         return None, 'N/A'
     index = 0
+    num_one = 'N/A'
+    num_two = 'N/A'
     for sub in array_one:
 
         if '.' in sub:

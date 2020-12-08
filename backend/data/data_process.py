@@ -48,7 +48,7 @@ def removeComma(filename):
     f.close()
 
 def modifycity():
-    country_list = read_file(project_path+"/data/country.csv")
+    country_list = read_file(project_path+"/data/国家.csv")
     province_list = read_file(project_path+"/data/province.csv")
     city_rel = read_file(project_path+"/data2/inf/城市_rel.csv")
     f = open(project_path+"/data3/complete/城市_rel.csv","w")
@@ -75,7 +75,7 @@ def modifycity():
     f.close()
 
 def modifyprovince():
-    country_list = read_file(project_path+"/data/country.csv")
+    country_list = read_file(project_path+"/data/国家.csv")
 
     city_rel = read_file(project_path+"/data2/inf/省_rel.csv")
     f = open(project_path+"/data3/complete/省_rel.csv","w")
@@ -121,7 +121,7 @@ def modifycountry():
     f.close()
 
 def modifynature(filename):
-    country_list = read_file(project_path + "/data/country.csv")
+    country_list = read_file(project_path + "/data/国家.csv")
     province_list = read_file(project_path + "/data/province.csv")
     city_list = read_file(project_path + "/data/city.csv")
     state_list = read_file(project_path + "/data/state.csv")
@@ -163,6 +163,7 @@ def modifynature(filename):
 
 
 def read_file(filename):
+
     with open(filename,"r") as rf:
         array = []
         lines = rf.readlines()

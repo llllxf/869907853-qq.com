@@ -15,7 +15,7 @@ import numpy as np
 project_path = os.path.abspath(os.path.join(os.getcwd(), ".."))
 sys.path.append(project_path)
 
-from graphSearch.graphSearch import graphSearch
+from graphSearch.graphSearch5 import graphSearch
 from nlu.formWords import formWords
 
 

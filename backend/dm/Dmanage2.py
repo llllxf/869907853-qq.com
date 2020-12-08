@@ -7,17 +7,20 @@
 """
 import sys
 import os
-import jieba
-import numpy as np
 project_path = os.path.abspath(os.path.join(os.getcwd(), ".."))
 # print(project_path)
 sys.path.append(project_path)
 
 from nlu.processNLU import processNLU
-from graphSearch.graphSearch import graphSearch4
 from nlg.generateAns import generateAns
-from inference import localtionInfernce
-from calculateUtil import getSingelCompareNum
+
+
+
+from graphSearch2.calculateBussiness import calculateBussiness
+from graphSearch2.compareBussiness import compareBussiness
+from graphSearch2.normalBussiness import normalBussiness
+
+
 from data.data_process import read_file
 import requests, json
 
@@ -28,16 +31,30 @@ import requests, json
 class DialogManagement(object):
     def __init__(self):
         self.nlu_util = processNLU()
-        self.graph_util = graphSearch()
+
         self.nlg_util = generateAns()
-        self.localtion_util = localtionInfernce()
 
+        self.normal_bussiness = normalBussiness()
+        self.compare_bussiness = compareBussiness()
+        self.calculate_bussiness = calculateBussiness()
 
+        self.last_sentence = []
+        self.wether = []
 
     def doNLU(self,words):
 
         ans_str = ""
-        ans_dict = self.nlu_util.differentWordsType(words)
+
+        ask_words,ans_ent = self.nlu_util.formAsking(words)
+
+
+        if ask_words is not None:
+            words = ask_words
+            self.wether = []
+            self.wether.append(ans_ent)
+
+        ans_dict = self.nlu_util.differentWordsType(words,self.last_sentence)
+
 
         words_type = ans_dict['words_type']
 
@@ -47,46 +64,43 @@ class DialogManagement(object):
             property = ans_dict['property']
             task_type = ans_dict['task_type']
 
-            compare_dict = self.dealCompare(entity_array,[property])
 
-            ans_str += self.doNLG(None, "ans_items", compare_dict)
-            ans_str += self.nlg_util.compareNLG(task_type,compare_dict)
+            compare_dict = self.normal_bussiness.taskNormalPro(entity_array, [property])
 
+            #compare_dict = self.dealCompare(entity_array,[property])
+
+            ans_str += self.doNLG(None, "ans_items", compare_dict,self.wether)
+            if 'less' in task_type:
+                ans_str += self.nlg_util.compareLessNLG(task_type, compare_dict)
+            else:
+                ans_str += self.nlg_util.compareMoreNLG(task_type, compare_dict)
             return ans_str,words_type
 
 
-        if words_type == 'task_calculate':
+        if 'task_calculate' in words_type:
 
             if ans_dict['task_type'] == 'task_calculate_ask':
+                self.last_sentence.append(words)
                 return [ans_dict['ask']]
+            if 'most' in ans_dict['task_type']:
 
-            spefify = ans_dict['predicate'][0]+ans_dict['predicate_adj'][0]
-            if ans_dict['limit'][0] != '世界':
-                son_list = self.localtion_util.getLocationByLimit(ans_dict['ask'][0],ans_dict['limit'][0])
-            else:
-                son_list = self.graph_util.getEntityByType(ans_dict['ask'][0])
-            if len(son_list) < 1:
-                return "对不起，暂时无法回答。\n",ans_dict['task_type']
+                ans,task_type = self.calculate_bussiness.doMostCalculate(ans_dict)
+                self.last_sentence = []
+                ans = self.nlg_util.ansMost(ans,self.wether)
+                self.wether = []
 
-            print("查找子类： ",son_list)
+                return ans,task_type
+            elif 'least' in ans_dict['task_type']:
+                ans, task_type = self.calculate_bussiness.doLeastCalculate(ans_dict)
+                self.last_sentence = []
+                ans = self.nlg_util.ansMost(ans,self.wether)
+                self.wether = []
+                return ans,task_type
+            elif 'dist' in ans_dict['task_type']:
+                ans, task_type = self.calculate_bussiness.doDistCalculate(ans_dict)
+                self.last_sentence = []
+                return ans,task_type
 
-
-            ans = self.graph_util.matchSpecify(son_list,spefify)
-
-            if ans != None and len(ans)>0:
-                print("通过匹配实体的特征值得到最值信息")
-                print("===========================================")
-                return ans, ans_dict['task_type']
-            else:
-
-                ent_list,num_list = self.graph_util.taskSonPro(son_list,ans_dict['predicate'])
-                form_num_list = [getSingelCompareNum(num) for num in num_list]
-                max_index = np.argmax(np.array(form_num_list))
-
-                print("通过比较实体的" + ans_dict['predicate'][0] + "得到最值信息")
-                print("===========================================")
-
-                return ent_list[max_index],ans_dict['task_type']
 
         if words_type == 'task_normal':
             ask_words = ans_dict['ask_words']
@@ -99,113 +113,57 @@ class DialogManagement(object):
             ask_ent = ans_dict['ask_ent']
 
             for i in range(3):
-                key_ent, ans_type, ans = self.dealNLU(ask_words, task_type_array[i], entity_array[i], property_array[i],
+                key_ent, ans_type, ans = self.normal_bussiness.doNormal(ask_words, task_type_array[i], entity_array[i], property_array[i],
                                                       keywords_array[i])
 
                 if ans != None and ans != "":
-                    ans_str = ans_str + self.doNLG(key_ent, ans_type, ans)
+                    ans_str = ans_str + self.doNLG(key_ent, ans_type, ans,self.wether)
                     return ans_str, task_type_array[i]
 
             for i in range(3):
                 if task_type_array[i] != 'task_singal_entity' and task_type_array[i] != None:
-                    key_ent, ans_type, ans = self.dealNLU(ask_words, "task_singal_entity", entity_array[i],
+                    key_ent, ans_type, ans = self.normal_bussiness.doNormal(ask_words, "task_singal_entity", entity_array[i],
                                                           property_array[i], keywords_array[i])
                 if ans != None and ans != "":
-                    ans_str = ans_str + self.doNLG(key_ent, ans_type, ans)
+                    ans_str = ans_str + self.doNLG(key_ent, ans_type, ans, self.wether)
+                    self.wether = []
                     return ans_str, "task_singal_entity"
                 """
                 ans = None
                 if (ans == None or ans == "") and (entity!=[] and entity != None):
                     task_type = "task_reverse"
-                    key_ent, ans_type, ans = self.dealNLU(ask_words, task_type, entity, property, keywords)
+                    key_ent, ans_type, ans = self.normal_bussiness.doNormal(ask_words, task_type, entity, property, keywords)
 
 
                     ans_str = ans_str + self.doNLG(key_ent, ans_type, ans)
 
                 if len(coo) > 0:
                     for c in coo:
-                        key_ent, ans_type, ans = self.dealNLU(ask_words, task_type, [c], property, keywords)
+                        key_ent, ans_type, ans = self.normal_bussiness.dealNLU(ask_words, task_type, [c], property, keywords)
                         ans_str = ans_str + self.doNLG(key_ent, ans_type, ans)
                 """
             task_type = "task_reverse"
-            key_ent, ans_type, ans = self.dealNLU(ask_words, task_type, entity_array[0], property_array[0],
+            key_ent, ans_type, ans = self.normal_bussiness.doNormal(ask_words, task_type, entity_array[0], property_array[0],
                                                   keywords_array[0])
             if ans != None and ans != "":
-                ans_str = ans_str + self.doNLG(key_ent, ans_type, ans)
+                ans_str = ans_str + self.doNLG(key_ent, ans_type, ans, self.wether)
+                self.wether = []
                 return ans_str, "task_reverse"
 
             return "", None
 
+    """
     def dealCompare(self,entity,property):
 
-        compare_dict = self.graph_util.taskNormalPro(entity,property)
-
+        compare_dict = self.normal_bussiness.taskNormalPro(entity,property)
 
         return compare_dict
+    """
 
 
-    def dealNLU(self,words,task_type,entity,property,keywords):
+    def doNLG(self,entity,ans_type,ans,wether):
 
-
-        if task_type == 'task_normal_pro':
-
-            ans = self.graph_util.taskNormalPro(entity,property)
-
-            if ans != None:
-                return entity[0], "ans_items", ans
-
-        if task_type == 'task_normal_rel':
-            ans = self.graph_util.taskNormalRel(entity,property)
-            if ans != None:
-                return entity[0], "ans_items", ans
-
-        if task_type == 'task_son_kw_match':
-            ans = self.graph_util.taskSonKeyWordForRel(entity, property,keywords)
-            if ans != None:
-                return keywords[0], "ans_list", ans
-            else:
-                return keywords[0],None,None
-
-        if task_type == 'task_son_match':
-            ans = self.graph_util.taskSonMatch(keywords,entity,property)
-            if ans != None:
-                return entity[0], "ans_triple", ans
-        """
-        已经取消了
-        if task_type == 'task_pro_match':
-            ans = self.graph_util.taskProMatch(keywords,entity,property)
-            if ans != None:
-                return entity[0], "ans_triple", ans
-        """
-
-        if task_type == 'task_singal_entity':
-            ans = self.graph_util.taskProName(words,entity)
-            if ans != None:
-                return entity[0], "ans_triple", ans
-
-        if task_type == 'task_reverse' and len(entity)>0:
-            ans = self.graph_util.taskReverse(words,entity)
-            if ans != None:
-                return entity[0], "ans_triple", ans
-        """
-        暂时取消
-        if task_type == 'task_limit_sub':
-
-            ans = self.graph_util.taskLimitSub(keywords,entity)
-            if ans != None:
-                return entity[0], "ans_list", ans
-        """
-
-        if len(entity)==0 or entity == None:
-
-            return None,None,None
-
-        return entity[0], None, None
-
-
-    def doNLG(self,entity,ans_type,ans):
-
-        ans_str = self.nlg_util.getAns(entity, ans_type, ans)
+        ans_str = self.nlg_util.getAns(entity, ans_type, ans,wether)
         return ans_str
 
 
@@ -234,8 +192,6 @@ if __name__ == '__main__':
             fok2.writelines(q + "\t" + pattern + "\n")
             fok2.writelines(ans + "\n")
             fok2.writelines("========================\n")
-
-
     """
     while(1):
         s = input("user: ")
@@ -243,8 +199,3 @@ if __name__ == '__main__':
             continue
         ans = a.doNLU(s)
         print(ans[0])
-
-
-
-
-

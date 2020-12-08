@@ -14,7 +14,7 @@ sys.path.append(project_path)
 from numUtil import getSingelCompareNum,getSingelDirNum
 import numpy as np
 
-from graphSearch.graphSearch import graphSearch
+from graphSearch.graphSearch5 import graphSearch
 from inference import localtionInfernce
 class calculateBussiness(object):
 
